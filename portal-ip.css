@@ -91,7 +91,7 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
 
 /* Discover: featured scenes and the portrait catalog. */
 .discovery-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px 24px; flex-wrap: wrap; }
-.discovery-heading h1 { margin: 0; }
+.discovery-heading h1 { margin: 0; font-size: 48px; }
 .spark-deck {
   position: relative; isolation: isolate;
   display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center;
