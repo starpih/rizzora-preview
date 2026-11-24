@@ -131,7 +131,6 @@ em { font-family: var(--font-display); font-weight: normal; color: var(--brand-p
 .experience-item > .icon { opacity: .6; margin-top: 6px; }
 .inline-link { display: inline-flex; gap: 8px; align-items: center; padding: 0; margin-top: 14px; border: 0; color: var(--brand-primary); background: none; font-size: 12px; }
 .inline-link .icon { width: 16px; height: 16px; }
-.safety-band { background: #20312f; }
 .safety-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; padding-block: 64px; align-items: center; }
 .safety-heading > img { margin-bottom: 18px; opacity: .7; }
 .safety-heading .eyebrow { margin-bottom: 16px; color: #ccdbd2; }
@@ -245,19 +244,21 @@ dialog .button { margin-top: 24px; }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; } .hero-art, .scene-photo { transform: none; will-change: auto; } }
 @media(prefers-reduced-motion:reduce) { .hero-cta, .hero-cta:is(:hover, :focus-visible, :active) { transform: none; } .hero-cta::before { animation: none !important; } .hero-cta:is(:hover, :focus-visible)::before { opacity: .5; } }
 
-.reasons { position: relative; isolation: isolate; max-width: 1080px; padding-block: clamp(48px, 6vw, 88px); }
-.reasons::before, .reasons::after {
+.reasons, .safety-inner { position: relative; isolation: isolate; }
+.reasons { max-width: 1080px; padding-block: clamp(48px, 6vw, 88px); }
+.reasons::before, .reasons::after,
+.safety-inner::before, .safety-inner::after {
   content: "";
   position: absolute;
   inset: 0 -10px;
   z-index: -1;
   pointer-events: none;
 }
-.reasons::before {
+.reasons::before, .safety-inner::before {
   background: linear-gradient(to bottom, var(--bg-page), #120e19 28%, #120e19 78%, var(--bg-page));
   mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent);
 }
-.reasons::after {
+.reasons::after, .safety-inner::after {
   top: auto;
   height: min(65%, 380px);
   background: radial-gradient(ellipse 50% 100% at 50% 105%, #865d882f, #67486619 55%, transparent 100%);
