@@ -10,7 +10,16 @@
   let checkoutState = "review";
   let membership = null;
   const chats = [];
-  const cycles = { monthly: { label: "Monthly", period: "1 month" }, quarterly: { label: "Quarterly", period: "3 months" }, yearly: { label: "Yearly", period: "12 months" } };
+  const cycles = {
+    monthly: { label: "Monthly", period: "1 month", first: "$9.95", regular: "$19.90", unit: "month", trialDays: 7 },
+    quarterly: { label: "Quarterly", period: "3 months", first: "$24.95", regular: "$49.90", unit: "quarter" },
+    yearly: { label: "Yearly", period: "12 months", first: "$89.95", regular: "$179.90", unit: "year" }
+  };
+  const cycleKey = "rizzora.preview.billing-cycle";
+  try {
+    const savedCycle = sessionStorage.getItem(cycleKey);
+    if (Object.hasOwn(cycles, savedCycle)) cycle = savedCycle;
+  } catch { /* The selection still works in memory. */ }
   const storageKey = "rizzora.ip.favorites";
   const favorites = new Set();
   try {
@@ -63,7 +72,11 @@
     if (onCard) deckStage.children[deckIndex].focus();
   });
   const heading = (eyebrow, title, detail = "") => `<header class="ip-page-heading"><p class="eyebrow">${eyebrow}</p><h1 tabindex="-1">${title}</h1>${detail ? `<p>${detail}</p>` : ""}</header>`;
-  const benefits = `<ul class="ip-benefits"><li>Text, voice messages, photo messages and voice calls</li><li>60,000 Stamina every month, on every billing cycle</li><li>Monthly Stamina resets; purchased extra Stamina is retained</li><li>All interactions use Stamina; included allowance is used first</li></ul>`;
+  const benefits = `<ul class="ip-benefits">
+    <li>${image("message")}Text &amp; photo messages</li>
+    <li>${image("mic")}Voice notes &amp; calls</li>
+    <li>${image("heart")}60,000 Stamina per month</li>
+  </ul>`;
   function recommendations() {
     const liked = characters.filter((c) => favorites.has(c.id));
     const traits = new Set(liked.flatMap((c) => c.traits));
@@ -105,7 +118,36 @@
       </section>`;
   }
   function membershipPage() {
-    extra.innerHTML = `${heading("RIZZORA MEMBERSHIP", "One VIP. Your kind of connection.", "Choose the billing rhythm that works for you.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP</h2>${benefits}<p class="ip-disclosure">Future short dramas and member videos are not included in the current offer. Prices and renewal terms are pending approval.</p></section><form id="plan-form"><fieldset class="ip-plans"><legend>Billing cycle</legend>${Object.entries(cycles).map(([id, c]) => `<label class="ip-plan"><input type="radio" name="cycle" value="${id}" ${id === cycle ? "checked" : ""}><span><strong>${c.label}</strong><small>Billed every ${c.period}</small></span><span class="ip-price">Price to be confirmed</span></label>`).join("")}</fieldset><p class="ip-disclosure">Payment preview · no money is charged.</p><button class="button button-primary" type="submit">Continue${image("arrow")}</button></form></div>`;
+    extra.innerHTML = `<div class="vip-page">
+      <header class="vip-intro">
+        <div class="vip-intro-copy">
+          <h1 tabindex="-1">Rizzora VIP</h1>
+          <p>Hear their voice, share a photo, or settle in for a longer conversation.</p>
+          ${benefits}
+        </div>
+      </header>
+      <form id="plan-form">
+        <fieldset class="ip-plans">
+          <legend>Choose your plan</legend>
+          <p class="vip-offer">Save 50% on your first paid billing period. All prices in USD.</p>
+          <div class="vip-options">${Object.entries(cycles).map(([id, plan]) => `
+            <label class="ip-plan">
+              <span class="vip-plan-top"><strong>${plan.label}</strong><input type="radio" name="cycle" value="${id}" ${id === cycle ? "checked" : ""}></span>
+              <span class="vip-amount">${plan.first}</span>
+              <span class="vip-period">First ${plan.unit}${plan.trialDays ? ` after a ${plan.trialDays}-day free trial` : ""}</span>
+              <span class="vip-renewal">Renews at <b>${plan.regular}</b> per ${plan.unit}.</span>
+            </label>`).join("")}
+          </div>
+        </fieldset>
+        <div class="vip-review"><p>Plans renew automatically. Cancel anytime.</p>
+          <button class="button button-primary" type="submit">Review plan${image("arrow")}</button></div>
+        <p class="vip-demo">Subscription preview · No payment will be taken.</p>
+      </form>
+      <details class="vip-details"><summary>How Stamina and the free trial work</summary>
+        <p>Every plan includes 60,000 Stamina each month. Chats, photos and voice interactions use Stamina. Your monthly balance resets, and any extra Stamina you buy carries over and is used after your monthly allowance.</p>
+        <p>On the monthly plan, the first ${cycles.monthly.trialDays} days are free. Trial Stamina expires at the end of the trial. With a live subscription, your card issuer may briefly show a temporary authorization hold.</p>
+      </details>
+    </div>`;
   }
   function checkout() {
     if (!signedIn) {
@@ -118,7 +160,8 @@
       extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
       return;
     }
-    extra.innerHTML = `${heading("CHECKOUT · PREVIEW", "Your VIP membership.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP · ${cycles[cycle].label}</h2>${benefits}</section><form id="payment-form"><dl class="ip-order"><div><dt>Billing period</dt><dd>${cycles[cycle].period}</dd></div><div><dt>Due today</dt><dd>Price to be confirmed</dd></div><div><dt>Renewal amount</dt><dd>Pending approval</dd></div><div><dt>Included allowance</dt><dd>60,000 Stamina / month</dd></div></dl><p class="ip-disclosure">Simulation only. No card or billing information is collected.</p><label class="ip-consent"><input type="checkbox" id="payment-consent" required>I understand this is a payment preview with no charge.</label><div class="ip-actions"><button class="button button-primary" type="submit">Simulate payment${image("arrow")}</button><button class="text-link" type="button" data-payment-fail>Simulate failure</button><button class="text-link" type="button" data-payment-cancel>Cancel</button></div></form></div>`;
+    const plan = cycles[cycle];
+    extra.innerHTML = `${heading("CHECKOUT · PREVIEW", "Your VIP membership.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP · ${cycles[cycle].label}</h2>${benefits}</section><form id="payment-form"><dl class="ip-order"><div><dt>Billing period</dt><dd>${cycles[cycle].period}</dd></div><div><dt>Starting price (USD)</dt><dd>${plan.trialDays ? `$0 for ${plan.trialDays} days` : `${plan.first} for the first ${plan.unit}`}</dd></div>${plan.trialDays ? `<div><dt>After the trial</dt><dd>${plan.first} for the first ${plan.unit}</dd></div>` : ""}<div><dt>Renews at</dt><dd>${plan.regular} per ${plan.unit}</dd></div><div><dt>Included allowance</dt><dd>60,000 Stamina / month</dd></div></dl><p class="ip-disclosure">Simulation only. No card or billing information is collected.</p><label class="ip-consent"><input type="checkbox" id="payment-consent" required>I understand this is a payment preview with no charge.</label><div class="ip-actions"><button class="button button-primary" type="submit">Simulate payment${image("arrow")}</button><button class="text-link" type="button" data-payment-fail>Simulate failure</button><button class="text-link" type="button" data-payment-cancel>Cancel</button></div></form></div>`;
   }
   function account() {
     if (!signedIn) { extra.innerHTML = `${heading("YOUR RIZZORA", "Welcome back.")}<button class="button button-primary" type="button" data-open="login">Log in</button>`; return; }
@@ -187,6 +230,11 @@
     if (button.hasAttribute("data-payment-cancel")) { checkoutState = "cancelled"; checkout(); }
     if (button.hasAttribute("data-renewal") && membership) { membership.renewal = !membership.renewal; account(); }
     if (button.hasAttribute("data-signout")) { membership = null; chats.length = 0; resumeCheckout = false; window.RizzoraChat?.clear(); if (location.hash === "#account") account(); }
+  });
+  document.addEventListener("change", event => {
+    if (!event.target.matches('#plan-form input[name="cycle"]')) return;
+    cycle = event.target.value;
+    try { sessionStorage.setItem(cycleKey, cycle); } catch { /* Use the in-memory selection. */ }
   });
   document.addEventListener("submit", (event) => {
     if (event.target.id === "plan-form") { event.preventDefault(); cycle = new FormData(event.target).get("cycle"); if (!cycles[cycle]) cycle = "monthly"; checkoutState = "review"; navigateTo("checkout"); }
