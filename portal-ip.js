@@ -25,6 +25,14 @@
   const byId = (id) => characters.find((c) => c.id === id);
   const deck = document.querySelector(".spark-deck");
   const deckStage = deck.querySelector(".deck-stage");
+  const deckQuotes = {
+    chris: "One frame left. Let’s save it for the sunset.",
+    kim: "Count me in? I want to try that last eight-count again.",
+    enzo: "Here, taste this. Do you think it needs more basil?",
+    julian: "Pull up a chair. I’m still working out the last chord.",
+    hayes: "Hear the rain? This is my favorite seat in the shop."
+  };
+  const mobileCaption = deck.querySelector(".deck-mobile-caption");
   let deckIndex = 0;
   function positionDeck() {
     const slides = [...deckStage.children];
@@ -34,7 +42,11 @@
       slide.dataset.offset = distance > count / 2 ? distance - count : distance;
       slide.inert = index !== deckIndex;
     });
-    deck.querySelector(".deck-status").textContent = `${slides[deckIndex].dataset.name}, ${deckIndex + 1} of ${count}`;
+    const active = slides[deckIndex];
+    const quote = deckQuotes[active.dataset.id];
+    mobileCaption.querySelector("strong").textContent = active.dataset.name;
+    mobileCaption.querySelector("span").textContent = quote;
+    deck.querySelector(".deck-status").textContent = `${active.dataset.name}, ${deckIndex + 1} of ${count}. ${quote}`;
   }
   function stepDeck(direction) {
     const count = deckStage.children.length;
@@ -61,10 +73,9 @@
     const orderChanged = lineup.some((c, index) => deckStage.children[index]?.dataset.id !== c.id);
     if (orderChanged) deckIndex = 0;
     deckStage.innerHTML = lineup.map(c => {
-      const scene = document.querySelector(`[data-hero-character="${c.id}"]`);
-      return `<a class="deck-card" data-id="${c.id}" data-name="${c.name}" href="#character/${c.id}" aria-label="Meet ${c.name}">
-        <img src="${scene?.getAttribute("src") || c.image}" alt="" decoding="async">
-        <span class="deck-caption"><strong>${c.name}</strong><span>${c.profession || c.interests[0]}</span></span>
+      return `<a class="deck-card" data-id="${c.id}" data-name="${c.name}" href="#character/${c.id}" aria-label="Meet ${c.name}" aria-describedby="deck-quote-${c.id}">
+        <img src="assets/discover-scenes/${c.id}.webp" width="1280" height="720" alt="" decoding="async">
+        <span class="deck-caption"><strong>${c.name}</strong><span id="deck-quote-${c.id}">${deckQuotes[c.id]}</span></span>
       </a>`;
     }).join("");
     positionDeck();
