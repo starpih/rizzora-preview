@@ -204,3 +204,27 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
   .deck-mobile-caption strong { font: 24px/1.1 var(--font-display); }
   .deck-mobile-caption span { font-size: 15px; line-height: 1.45; }
 }
+
+.personal-center { max-width: 640px; margin-inline: auto; }
+.center-title { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+.center-title h1 { font: 42px/1.15 var(--font-display); }
+.center-title h1:focus { outline: none; }
+.center-back { width: 44px; height: 44px; }
+.center-back img { transform: rotate(180deg); }
+.center-section { margin-bottom: 22px; }
+.center-section h2 { margin-bottom: 10px; font: 600 15px/1.5 var(--font-body); color: var(--text-secondary); }
+.center-identity, .center-membership { display: flex; gap: 16px; align-items: center; padding: 20px; border-radius: 14px; background: var(--bg-surface); }
+.center-avatar { width: 48px; height: 48px; display: grid; place-items: center; flex: none; border-radius: 50%; background: linear-gradient(135deg,#68314f,#483756); color: #ffdaeb; font: 26px var(--font-display); }
+.center-identity p, .center-note { color: var(--text-secondary); font-size: 13px; }
+.center-membership { justify-content: space-between; flex-wrap: wrap; background: linear-gradient(115deg,#43263d,#302333); }
+.center-membership strong { font: 26px/1.2 var(--font-display); }
+.center-menu { padding-inline: 20px; border-radius: 14px; background: var(--bg-surface); }
+.center-menu button { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 54px; padding: 10px 2px; background: transparent; border: 0; text-align: start; }
+.center-menu button + button { border-top: 1px solid var(--border-default); }
+.center-menu .icon { width: 16px; height: 16px; transform: rotate(-90deg); opacity: .7; }
+.center-menu button:hover { color: #f3a8d4; }
+.center-note { margin-top: 16px; }
+@media (max-width: 700px) {
+  .center-title h1 { font-size: 34px; }
+  .center-membership { align-items: stretch; flex-direction: column; }
+}

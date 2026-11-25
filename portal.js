@@ -333,7 +333,7 @@ function finishDemoLogin(user = {}) {
     avatar.textContent = typeof user.name === "string" && user.name.trim() ? Array.from(user.name.trim())[0].toUpperCase() : "E";
     document.querySelector(".login-button").prepend(avatar);
   }
-  document.querySelector("#account-label").textContent = "My account";
+  document.querySelector("#account-label").textContent = "User Center";
   if (window.RizzoraIP?.afterLogin()) return;
   if (/^#chat(?:\/|$)/.test(location.hash)) {
     if (!window.RizzoraChat.resumeGuestDraft()) { closeDialog(); route(); }
@@ -342,7 +342,7 @@ function finishDemoLogin(user = {}) {
   else { closeDialog(); showAccount(); }
 }
 function showAccount() {
-  if (window.RizzoraIP) { navigateTo("account"); return; }
+  if (window.RizzoraIP) { window.RizzoraIP.openAccount(); return; }
   showDialog(`<p class="eyebrow">DEMO ACCOUNT</p><h2 id="dialog-title">Hello, explorer.</h2><p>Your account gives you a place to return to your conversations.</p><p class="demo-label">This preview uses a temporary demo session. No personal information or purchase history is stored.</p><div class="dialog-stack"><button type="button" data-open="subscription">Explore VIP benefits</button><button type="button" data-open="chat">Open a demo conversation</button><button type="button" data-signout>Sign out of demo</button></div>`);
 }
 function showChat() {

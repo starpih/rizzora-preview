@@ -9,6 +9,8 @@
   let resumeCheckout = false;
   let checkoutState = "review";
   let membership = null;
+  let accountOrigin = "#home";
+  let sampleCredits = 0;
   const chats = [];
   const cycles = {
     monthly: { label: "Monthly", period: "1 month", first: "$9.95", regular: "$19.90", unit: "month", trialDays: 7 },
@@ -164,9 +166,26 @@
     extra.innerHTML = `${heading("CHECKOUT · PREVIEW", "Your VIP membership.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP · ${cycles[cycle].label}</h2>${benefits}</section><form id="payment-form"><dl class="ip-order"><div><dt>Billing period</dt><dd>${cycles[cycle].period}</dd></div><div><dt>Starting price (USD)</dt><dd>${plan.trialDays ? `$0 for ${plan.trialDays} days` : `${plan.first} for the first ${plan.unit}`}</dd></div>${plan.trialDays ? `<div><dt>After the trial</dt><dd>${plan.first} for the first ${plan.unit}</dd></div>` : ""}<div><dt>Renews at</dt><dd>${plan.regular} per ${plan.unit}</dd></div><div><dt>Included allowance</dt><dd>60,000 Stamina / month</dd></div></dl><p class="ip-disclosure">Simulation only. No card or billing information is collected.</p><label class="ip-consent"><input type="checkbox" id="payment-consent" required>I understand this is a payment preview with no charge.</label><div class="ip-actions"><button class="button button-primary" type="submit">Simulate payment${image("arrow")}</button><button class="text-link" type="button" data-payment-fail>Simulate failure</button><button class="text-link" type="button" data-payment-cancel>Cancel</button></div></form></div>`;
   }
   function account() {
-    if (!signedIn) { extra.innerHTML = `${heading("YOUR RIZZORA", "Welcome back.")}<button class="button button-primary" type="button" data-open="login">Log in</button>`; return; }
-    extra.innerHTML = `${heading("DEMO ACCOUNT", "Your Rizzora.")}<div class="ip-account-grid"><section><h2>Membership</h2><p>${membership ? `VIP · ${cycles[membership.cycle].label}` : "Free account"}</p><p class="ip-disclosure">${membership ? (membership.renewal ? "Demo renewal enabled. No automatic payment is scheduled." : "Demo renewal disabled. No payment is scheduled.") : "No active VIP subscription."}</p><a class="text-link" href="#membership">${membership ? "Change plan" : "Explore VIP"}${image("arrow")}</a>${membership ? '<button class="text-link" type="button" data-renewal>' + (membership.renewal ? "Turn off demo renewal" : "Enable demo renewal") + '</button>' : ""}</section><section><h2>Your characters</h2><p>${favorites.size} saved</p><div class="ip-saved-list">${characters.filter((c) => favorites.has(c.id)).map((c) => `<a href="#character/${c.id}">${c.name}${image("arrow")}</a>`).join("") || '<a href="#discover">Explore the characters</a>'}</div></section></div><section class="ip-order-history"><h2>Payment history</h2><p>${membership ? `Demo order · Rizzora VIP · ${cycles[membership.cycle].label} · No charge` : "No payments."}</p></section><button class="text-link" type="button" data-signout>Sign out of demo</button>`;
+    const header = `<div class="center-title"><a class="icon-button center-back" aria-label="Back" id="account-back">${image("arrow")}</a><h1 tabindex="-1">User Center</h1></div>`;
+    extra.innerHTML = `<div class="personal-center">${header}${signedIn ? `
+      <section class="center-section"><h2>Account</h2>
+        <div class="center-identity"><span class="center-avatar" aria-hidden="true">E</span>
+          <div><strong>Explorer</strong><p>explorer@example.invalid</p></div></div>
+      </section>
+      <section class="center-section"><h2>Membership</h2>
+        <div class="center-membership"><strong>${membership ? `Rizzora VIP · ${cycles[membership.cycle].label}` : "Free Plan"}</strong>
+          <a class="button button-primary" href="#membership">${membership ? "View plan" : "Become Premium"}${image("arrow")}</a></div>
+      </section>
+      <div class="center-menu">
+        <button type="button" data-center-supplement>Stamina Supplement${image("chevron")}</button>
+        <button type="button" data-center-install>Install app${image("chevron")}</button>
+        <button type="button" data-signout>Log out${image("chevron")}</button>
+      </div>
+      <p class="center-note">Demo account · Sample profile and credits.</p>` : `
+      <p>Log in to view your account and membership.</p><button type="button" class="button button-primary" data-open="login">Log in</button>`}</div>`;
+    extra.querySelector("#account-back").setAttribute("href", accountOrigin);
   }
+
   function stopMedia() { document.querySelectorAll("#ip-view video").forEach((v) => v.pause()); }
   function route({ initialLoad = false } = {}) {
     // A history/navigation change cancels the old dialog's intended destination.
@@ -195,7 +214,7 @@
     else if (isChat) window.RizzoraChat.render(extra, hash.split("/")[1]);
     else if (hash === "membership") { membershipPage(); document.title = "VIP Membership | Rizzora"; }
     else if (hash === "checkout") { checkout(); document.title = "Checkout Preview | Rizzora"; }
-    else if (hash === "account") { account(); document.title = "My Account | Rizzora"; }
+    else if (hash === "account") { account(); document.title = "User Center | Rizzora"; }
     else if (hash === "discover") { recommendations(); document.title = "Discover Characters | Rizzora"; }
     else document.title = "Rizzora | Characters. Stories. Connection.";
     closeMenu();
@@ -210,6 +229,10 @@
   }
   window.RizzoraIP = {
     route,
+    openAccount() {
+      if (!["#account", "#checkout"].includes(location.hash)) accountOrigin = location.hash || "#home";
+      navigateTo("account");
+    },
     afterLogin() { if (!resumeCheckout) return false; resumeCheckout = false; pendingChat = false; closeDialog(); navigateTo("checkout"); return true; },
     isVIP() { return signedIn && Boolean(membership); },
     rememberChat(id) { if (!chats.includes(id)) chats.unshift(id); },
@@ -228,8 +251,23 @@
     if (button.hasAttribute("data-payment-retry")) { checkoutState = "review"; checkout(); }
     if (button.hasAttribute("data-payment-fail")) { checkoutState = "failed"; checkout(); }
     if (button.hasAttribute("data-payment-cancel")) { checkoutState = "cancelled"; checkout(); }
-    if (button.hasAttribute("data-renewal") && membership) { membership.renewal = !membership.renewal; account(); }
-    if (button.hasAttribute("data-signout")) { membership = null; chats.length = 0; resumeCheckout = false; window.RizzoraChat?.clear(); if (location.hash === "#account") account(); }
+    if (button.hasAttribute("data-center-install")) {
+      showDialog('<h2 id="dialog-title">Install app</h2><p>App installation is unavailable in this preview. You can keep using Rizzora in your browser.</p>');
+    }
+    if (button.hasAttribute("data-center-supplement") && signedIn) {
+      showDialog(`<h2 id="dialog-title">Stamina Supplement</h2><p>Try a sample pack. No payment is taken.</p>
+        <p role="status" data-credit-balance>Extra credits: ${sampleCredits}</p>
+        <button type="button" class="button button-primary" data-sample-pack>Add 60 sample credits</button>`);
+    }
+    if (button.hasAttribute("data-sample-pack") && signedIn) {
+      sampleCredits += 60;
+      dialogContent.querySelector("[data-credit-balance]").textContent = `Extra credits: ${sampleCredits}`;
+    }
+    if (button.hasAttribute("data-signout")) {
+      membership = null; sampleCredits = 0; chats.length = 0; resumeCheckout = false;
+      window.RizzoraChat?.clear();
+      if (location.hash === "#account") { account(); extra.querySelector("h1").focus(); }
+    }
   });
   document.addEventListener("change", event => {
     if (!event.target.matches('#plan-form input[name="cycle"]')) return;
