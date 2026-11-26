@@ -133,16 +133,16 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
 .topup-copy, .topup-summary p { color: var(--text-secondary); }
 .topup-copy { margin: 6px 0 18px; }
 .topup-options { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(180px,100%),1fr)); gap: 12px; }
-.topup-card { position: relative; display: grid; grid-template-rows: auto auto auto 1fr auto; justify-items: center; text-align: center; gap: 6px; padding: 20px 12px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--bg-surface); cursor: pointer; }
+.topup-card { position: relative; container-type: inline-size; display: grid; grid-template-rows: auto auto auto 1fr auto; justify-items: center; text-align: center; gap: 6px; padding: 20px 12px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--bg-surface); cursor: pointer; }
 .topup-card:hover { background: var(--bg-raised); }
 .topup-card:has(:checked) { border-color: #e38ab2; background: radial-gradient(ellipse at 50% 0%, #513046, #2a202f 78%); }
 .topup-card:has(:focus-visible) { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
 .topup-card input { position: absolute; top: 14px; right: 14px; width: 17px; height: 17px; margin: 0; accent-color: var(--brand-primary); }
 .topup-card img { object-fit: contain; margin-bottom: 4px; }
 .topup-name { color: var(--text-secondary); font-size: 14px; }
-.topup-quantity, .topup-bonus { white-space: nowrap; font: 500 clamp(30px,3vw,42px)/1.08 var(--font-display); }
-.topup-bonus { font-size: clamp(24px,2.5vw,34px); color: #f2ce99; }
-.topup-quantity small, .topup-bonus small { font: 500 13px/1.2 var(--font-body); }
+.topup-quantity, .topup-bonus { max-width: 100%; font: 500 clamp(24px,18cqi,34px)/1.12 var(--font-display); }
+.topup-bonus { font-size: clamp(20px,15cqi,28px); color: #f2ce99; }
+.topup-quantity small, .topup-bonus small { font: 500 12px/1.2 var(--font-body); }
 .topup-price { grid-row: 5; margin-top: 8px; color: var(--text-secondary); font-size: 13px; }
 .topup-summary img { width: 100px; height: 100px; object-fit: contain; }
 @media (max-width: 700px) {
@@ -150,6 +150,8 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
   .topup-card { grid-template-rows: auto; grid-template-columns: 54px minmax(0,1fr); justify-items: start; text-align: left; align-items: center; gap: 4px 14px; padding: 14px 32px 14px 12px; }
   .topup-card img { grid-row: 1 / 5; width: 54px; height: 54px; margin: 0; }
   .topup-card input { right: 12px; }
+  .topup-quantity { font-size: 28px; }
+  .topup-bonus { font-size: 23px; }
   .topup-price { grid-column: 2; grid-row: auto; margin-top: 2px; }
 
 }
