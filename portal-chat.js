@@ -184,7 +184,7 @@
     const list = host?.querySelector('.history-threads');
     if (!list || host.hidden) return;
     const query = historySearch.trim().toLowerCase();
-    const conversations = signedIn ? recentThreads() : characters.map(c => [c.id, thread(c.id)]);
+    const conversations = signedIn ? recentThreads() : [];
     const rows = conversations.filter(([id]) => byId(id).name.toLowerCase().includes(query));
     const focusHref = list.contains(document.activeElement) && document.activeElement.getAttribute('href');
     list.innerHTML = rows.map(([id, t]) => {
@@ -532,9 +532,9 @@
       return;
     }
     const inbox = signedIn && !id;
-    if (!id) {
-      const history=recentThreads();
-      id=signedIn ? (history.find(([key])=>key===lastOpened) || history[0])?.[0] : characters[0].id;
+    if (inbox) {
+      const history = recentThreads();
+      id = (history.find(([key]) => key === lastOpened) || history[0])?.[0];
     }
     if (!id) {
       host.innerHTML = `<div class="chat-layout empty-chat">${historyPane()}<section class="empty-room"><div>
@@ -550,7 +550,7 @@
     document.title = `Chat with ${c.shortName} | Rizzora`;
     const state = thread(id);
     if (!state.unread) state.messages.forEach(message => { message.newArrival = false; });
-    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="${signedIn ? '#chat' : '#discover'}" aria-label="${signedIn ? 'Back to conversations' : 'Discover companions'}">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div>${chatTools()}</header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" role="group" aria-label="Conversation starters" hidden></div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
+    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="#chat" aria-label="Back to conversations">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div>${chatTools()}</header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" role="group" aria-label="Conversation starters" hidden></div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
     bindHistory();
     clearUnread();
     updatePresence();
