@@ -8,10 +8,10 @@
   let cycle = "monthly";
   let resumeCheckout = false;
   let checkoutState = "review";
+  let upgradePhoto = null;
   let membership = null;
   let accountOrigin = "#home";
   let sampleCredits = 0;
-  const chats = [];
   const cycles = {
     monthly: { label: "Monthly", period: "1 month", first: "$9.95", regular: "$19.90", unit: "month", trialDays: 7 },
     quarterly: { label: "Quarterly", period: "3 months", first: "$24.95", regular: "$49.90", unit: "quarter" },
@@ -31,7 +31,6 @@
     const choices = JSON.parse(sessionStorage.getItem("rizzora.spark.discovery.v1") || "[]");
     if (storedFavorites === null && Array.isArray(choices)) choices.forEach((choice) => { if (choice?.decision === "like" && characters.some((c) => c.id === choice.id)) favorites.add(choice.id); });
   } catch { /* Private browsing may disable session storage. */ }
-  function saveFavorites() { try { sessionStorage.setItem(storageKey, JSON.stringify([...favorites])); } catch { /* Keep in-memory preferences. */ } }
   const image = (name) => `<img class="icon" src="assets/${name}.svg" alt="">`;
   const byId = (id) => characters.find((c) => c.id === id);
   const deck = document.querySelector(".spark-deck");
@@ -88,36 +87,43 @@
     const orderChanged = lineup.some((c, index) => deckStage.children[index]?.dataset.id !== c.id);
     if (orderChanged) deckIndex = 0;
     deckStage.innerHTML = lineup.map(c => {
-      return `<a class="deck-card" data-id="${c.id}" data-name="${c.name}" href="#character/${c.id}" aria-label="Meet ${c.name}" aria-describedby="deck-quote-${c.id}">
+      return `<a class="deck-card" data-id="${c.id}" data-name="${c.name}" href="#chat/${c.id}" aria-label="Meet ${c.name}" aria-describedby="deck-quote-${c.id}">
         <img src="assets/discover-scenes/${c.id}.webp" width="1280" height="720" alt="" decoding="async">
         <span class="deck-caption"><strong>${c.name}</strong><span id="deck-quote-${c.id}">${deckQuotes[c.id]}</span></span>
       </a>`;
     }).join("");
     positionDeck();
-    document.querySelector("#continue-band").hidden = !signedIn || !chats.length;
-    document.querySelector("#continue-characters").innerHTML = chats.map((id) => `<button type="button" data-chat="${id}"><img src="${byId(id).image}" alt=""><span>${byId(id).shortName}</span>${image("message")}</button>`).join("");
+    renderRecentChats();
   }
-  function profile(id) {
-    const c = byId(id);
-    if (!c) { extra.innerHTML = `${heading("RIZZORA", "Character not found.")}<a class="text-link" href="#discover">Back to Discover${image("arrow")}</a>`; return; }
-    const meta = [c.nationality, c.profession].filter(Boolean).join(" · ");
-    const scene = document.querySelector(`[data-hero-character="${c.id}"]`);
-    const story = scene?.dataset.story || (c.id === "chris" ? "The song you sent is still playing when you arrive. Chris moves his sweater off the sofa. “I saved you the good spot.”" : c.summary);
-    const clip = c.id === "chris" ? "assets/hero-chris-v1.mp4" : featuredVideos[c.id];
-    const saved = favorites.has(c.id);
-    extra.innerHTML = `<nav class="ip-profile-breadcrumbs" aria-label="Profile navigation"><a class="ip-back" href="#home">${image("arrow")}Home</a><a class="ip-back" href="#discover">Discover characters</a></nav>
-      <div class="ip-profile"><div class="ip-profile-photo"><img src="${c.image}" alt="${c.name}, a virtual AI character"></div><div>
-        ${heading("THE RIZZORA CHARACTERS", c.name, c.summary)}
-        ${meta ? `<p class="ip-meta">${meta}</p>` : ""}
-        <div class="companion-traits">${[...c.traits, ...c.interests].map((t) => `<span>${t}</span>`).join("")}</div>
-        <div class="ip-actions"><button class="button button-primary" type="button" data-chat="${c.id}">Say hello${image("message")}</button><button class="icon-button ip-save" type="button" data-save="${c.id}" aria-label="${saved ? "Unsave" : "Save"} ${c.shortName}" title="${saved ? "Unsave" : "Save"} character" aria-pressed="${saved}">${image("heart")}</button></div>
-        <nav class="ip-tabs" aria-label="Character sections"><button type="button" data-profile-section="story-${c.id}" aria-controls="story-${c.id}">Story</button><button type="button" data-profile-section="moments-${c.id}" aria-controls="moments-${c.id}">Moments</button></nav>
-        <section id="story-${c.id}" class="ip-profile-section" tabindex="-1" aria-labelledby="story-title-${c.id}"><h2 id="story-title-${c.id}">Meet ${c.shortName}.</h2><p class="ip-story">${story}</p><p class="ip-disclosure">A fictional AI character. Profile copy is a creative preview.</p></section>
-      </div></div>
-      <section class="ip-moments ip-profile-section" id="moments-${c.id}" tabindex="-1" aria-labelledby="moments-title-${c.id}"><div class="section-heading"><h2 id="moments-title-${c.id}">A moment with ${c.shortName}.</h2><span class="eyebrow">${clip ? "FEATURED CLIP" : "A QUIET MOMENT"}</span></div>
-        ${clip ? `<video controls playsinline preload="none" poster="${c.image}" src="${clip}" aria-label="A moment with ${c.shortName}"></video>` : `<figure class="ip-profile-still"><img src="${scene?.getAttribute("src") || c.image}" alt="Hayes reading in a softly lit bookshop" loading="lazy"><figcaption>${story}</figcaption></figure>`}
-        <button class="button button-primary ip-moment-hello" type="button" data-chat="${c.id}">Say hello to ${c.shortName}${image("message")}</button>
-      </section>`;
+  function renderRecentChats() {
+    const conversations = window.RizzoraChat.recentConversations();
+    const unreadChats = conversations.filter(chat => chat.unread > 0);
+    const recent = unreadChats[0] || conversations[0];
+    const pill = document.querySelector("#recent-conversation");
+    const stack = pill.parentElement;
+    stack.hidden = !recent;
+    stack.dataset.layers = Math.max(0, Math.min(2, unreadChats.length - 1));
+    if (!recent) {
+      pill.removeAttribute("href");
+      pill.removeAttribute("aria-label");
+      pill.querySelector(".recent-message").textContent = "";
+      pill.querySelector(".recent-unread").textContent = "";
+      return;
+    }
+    const c = byId(recent.id);
+    const words = recent.message.text.trim().split(/\s+/);
+    const preview = words.slice(0, 5).join(" ") + (words.length > 5 ? "…" : "");
+    pill.href = "#chat/" + c.id;
+    pill.querySelector("img").src = c.image;
+    pill.querySelector(".recent-message").textContent = preview;
+    const badge = pill.querySelector(".recent-unread");
+    badge.hidden = !recent.unread;
+    badge.textContent = recent.unread > 99 ? "99+" : String(recent.unread);
+    const unreadLabel = recent.unread ? `, ${recent.unread} unread` : "";
+    const others = unreadChats.length - 1;
+    const stackLabel = others > 0 ? ` · ${others} other unread conversation${others > 1 ? "s" : ""}` : "";
+    pill.setAttribute("aria-label", `Continue chat with ${c.shortName}${unreadLabel}. ${preview}${stackLabel}`);
+    pill.title = `Continue chat with ${c.shortName}${stackLabel}`;
   }
   function membershipPage() {
     extra.innerHTML = `<div class="vip-page">
@@ -159,7 +165,8 @@
     if (checkoutState !== "review") {
       const labels = { success: ["VIP is active.", "Your demo membership is ready. No payment was made."], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
       const [title, detail] = labels[checkoutState];
-      extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
+      const photoLink = upgradePhoto ? `<a class="text-link" href="#chat/${upgradePhoto.id}">${checkoutState === "success" ? "View unlocked photo" : "Back to photo"}</a>` : "";
+      extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}${photoLink}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
       return;
     }
     const plan = cycles[cycle];
@@ -181,8 +188,12 @@
         <button type="button" data-center-install>Install app${image("chevron")}</button>
         <button type="button" data-signout>Log out${image("chevron")}</button>
       </div>
+      ${window.RizzoraAuthService ? "" : `<label class="keep-chats"><input id="keep-demo-chats" type="checkbox" ${window.RizzoraChat.keepsInTab() ? "checked" : ""}> Keep demo conversations in this tab after a refresh</label>`}
       <p class="center-note">Demo account · Sample profile and credits.</p>` : `
       <p>Log in to view your account and membership.</p><button type="button" class="button button-primary" data-open="login">Log in</button>`}</div>`;
+    extra.querySelector("#keep-demo-chats")?.addEventListener("change", event => {
+      event.target.checked = window.RizzoraChat.keepInTab(event.target.checked);
+    });
     extra.querySelector("#account-back").setAttribute("href", accountOrigin);
   }
 
@@ -196,57 +207,60 @@
     stopMedia();
     stopFeaturedPreview();
     window.RizzoraChat?.leave();
-    const hash = location.hash.slice(1);
-    const localProfileAnchor = hash.startsWith("story-") || hash.startsWith("moments-");
+    let hash = location.hash.slice(1);
+    const oldProfile = /^(?:character\/|story-|moments-)([^/]+)$/.exec(hash);
+    if (oldProfile) {
+      hash = `chat/${oldProfile[1]}`;
+      history.replaceState(history.state, "", "#" + hash);
+    }
+    const returnPhoto = upgradePhoto && hash === "chat/" + upgradePhoto.id ? upgradePhoto : null;
+    if (hash !== "membership" && hash !== "checkout") upgradePhoto = null;
     const isChat = hash === "chat" || hash.startsWith("chat/");
-    const isHome = !isChat && !["discover", "membership", "checkout", "account"].includes(hash) && !hash.startsWith("character/") && !localProfileAnchor;
+    const isHome = !isChat && !["discover", "membership", "checkout", "account"].includes(hash);
     document.querySelector("#home-view").hidden = !isHome;
     document.querySelector("#discover-view").hidden = hash !== "discover";
     extra.hidden = isHome || hash === "discover";
     document.body.dataset.view = isHome ? "home" : hash === "discover" ? "discover" : isChat ? "chat" : "ip";
     document.querySelectorAll("[data-nav]").forEach((a) => { if (a.dataset.nav === (isHome ? "home" : isChat ? "chat" : hash)) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
-    if (hash.startsWith("character/") || localProfileAnchor) {
-      const id = localProfileAnchor ? hash.replace(/^(story|moments)-/, "") : hash.split("/")[1];
-      profile(id);
-      if (byId(id)) selectedCharacter = byId(id);
-      document.title = `${byId(id)?.name || "Character"} | Rizzora`;
-    }
-    else if (isChat) window.RizzoraChat.render(extra, hash.split("/")[1]);
+    if (isChat) window.RizzoraChat.render(extra, hash.split("/")[1]);
     else if (hash === "membership") { membershipPage(); document.title = "VIP Membership | Rizzora"; }
     else if (hash === "checkout") { checkout(); document.title = "Checkout Preview | Rizzora"; }
     else if (hash === "account") { account(); document.title = "User Center | Rizzora"; }
     else if (hash === "discover") { recommendations(); document.title = "Discover Characters | Rizzora"; }
     else document.title = "Rizzora | Characters. Stories. Connection.";
     closeMenu();
-    const focusTarget = localProfileAnchor ? document.getElementById(hash) : isHome ? document.querySelector(".hero h1") : hash === "discover" ? document.querySelector("#discover-title") : extra.querySelector("h1");
-    if (!dialog.open && focusTarget && (!initialLoad || localProfileAnchor)) {
-      focusTarget.setAttribute("tabindex", "-1");
+    const draftInput = hash.startsWith("chat/") ? extra.querySelector("#chat-message") : null;
+    let focusTarget = isHome ? document.querySelector(".hero h1") : hash === "discover" ? document.querySelector("#discover-title") : extra.querySelector("h1");
+    if (draftInput?.value) focusTarget = draftInput;
+    if (!dialog.open && focusTarget && !initialLoad) {
+      if (focusTarget !== draftInput) focusTarget.setAttribute("tabindex", "-1");
       focusTarget.focus({ preventScroll: true });
     }
-    if (localProfileAnchor || (isHome && hash && hash !== "home")) document.getElementById(hash)?.scrollIntoView();
+    if (isHome && hash && hash !== "home") document.getElementById(hash)?.scrollIntoView();
     else window.scrollTo({ top: 0, behavior: "instant" });
+    if (returnPhoto) window.RizzoraChat.viewPhoto(returnPhoto.index);
     window.RizzoraHero?.sync();
   }
   window.RizzoraIP = {
-    route,
+    route, renderRecentChats,
+    demoBenefits() { return { membership, sampleCredits }; },
+    restoreDemoBenefits(account) {
+      const plan = account?.membership;
+      if (plan && Object.hasOwn(cycles, plan.cycle)) membership = { cycle: plan.cycle, renewal: Boolean(plan.renewal) };
+      if (Number.isSafeInteger(account?.sampleCredits) && account.sampleCredits >= 0) sampleCredits = account.sampleCredits;
+    },
+    rememberUpgradePhoto(id, index) { upgradePhoto = { id, index }; },
     openAccount() {
       if (!["#account", "#checkout"].includes(location.hash)) accountOrigin = location.hash || "#home";
       navigateTo("account");
     },
     afterLogin() { if (!resumeCheckout) return false; resumeCheckout = false; pendingChat = false; closeDialog(); navigateTo("checkout"); return true; },
     isVIP() { return signedIn && Boolean(membership); },
-    rememberChat(id) { if (!chats.includes(id)) chats.unshift(id); },
   };
   dialog.addEventListener("close", () => { if (!signedIn) resumeCheckout = false; });
   document.addEventListener("click", (event) => {
     const button = event.target.closest("button, a");
     if (!button) return;
-    if (button.dataset.profileSection) {
-      const section = document.getElementById(button.dataset.profileSection);
-      section?.focus({ preventScroll: true }); section?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
-    }
-    if (button.dataset.profile) location.hash = `character/${button.dataset.profile}`;
-    if (button.dataset.save) { const id = button.dataset.save; if (!byId(id)) return; if (favorites.has(id)) favorites.delete(id); else favorites.add(id); saveFavorites(); button.setAttribute("aria-pressed", String(favorites.has(id))); button.setAttribute("aria-label", `${favorites.has(id) ? "Unsave" : "Save"} ${byId(id).shortName}`); button.title = `${favorites.has(id) ? "Unsave" : "Save"} character`; }
     if (button.hasAttribute("data-checkout-login")) { resumeCheckout = true; showLogin(); }
     if (button.hasAttribute("data-payment-retry")) { checkoutState = "review"; checkout(); }
     if (button.hasAttribute("data-payment-fail")) { checkoutState = "failed"; checkout(); }
@@ -264,7 +278,7 @@
       dialogContent.querySelector("[data-credit-balance]").textContent = `Extra credits: ${sampleCredits}`;
     }
     if (button.hasAttribute("data-signout")) {
-      membership = null; sampleCredits = 0; chats.length = 0; resumeCheckout = false;
+      membership = null; sampleCredits = 0; resumeCheckout = false;
       window.RizzoraChat?.clear();
       if (location.hash === "#account") { account(); extra.querySelector("h1").focus(); }
     }
@@ -278,6 +292,7 @@
     if (event.target.id === "plan-form") { event.preventDefault(); cycle = new FormData(event.target).get("cycle"); if (!cycles[cycle]) cycle = "monthly"; checkoutState = "review"; navigateTo("checkout"); }
     if (event.target.id === "payment-form") { event.preventDefault(); if (!signedIn || !event.target.checkValidity()) return; membership = { cycle, renewal: true }; checkoutState = "success"; checkout(); }
   });
+  window.RizzoraChat.restoreTab();
   recommendations();
   route({ initialLoad: true });
 })();

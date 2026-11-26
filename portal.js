@@ -30,7 +30,7 @@ function discoveryCard(c) {
   return `<article class="catalog-card">
     <img class="catalog-portrait" src="${c.image}" alt="" loading="lazy">
     <div class="catalog-caption">
-      <h3><a href="#character/${c.id}">${c.name}</a> <small>${age}</small></h3>
+      <h3><a href="#chat/${c.id}">${c.name}</a> <small>${age}</small></h3>
       ${c.nationality ? `<p class="catalog-origin">${c.nationality}</p>` : ""}
       <p class="catalog-summary">${c.summary}</p>
       <div class="catalog-tags">${c.traits.map(trait => `<span>${trait}</span>`).join("")}</div>
@@ -40,7 +40,7 @@ function discoveryCard(c) {
 }
 
 function characterCard(character) {
-  const action = `data-profile="${character.id}"`;
+  const action = `data-chat="${character.id}"`;
   const preview = featuredVideos[character.id];
   return `<article class="companion-card">
     ${preview ? `<div class="portrait-preview" data-character-preview="${character.id}">` : ""}
@@ -321,7 +321,7 @@ function showLogin() {
   if (signedIn && !pendingChat) return showAccount();
   portalAuth.open({ character: pendingChat ? selectedCharacter.shortName : "" });
 }
-function finishDemoLogin(user = {}) {
+function showSignedInAccount(user = {}) {
   signedIn = true;
   returnFocus = null;
   updateUnreadCount(0);
@@ -334,6 +334,9 @@ function finishDemoLogin(user = {}) {
     document.querySelector(".login-button").prepend(avatar);
   }
   document.querySelector("#account-label").textContent = "User Center";
+}
+function finishDemoLogin(user = {}) {
+  showSignedInAccount(user);
   if (window.RizzoraIP?.afterLogin()) return;
   if (/^#chat(?:\/|$)/.test(location.hash)) {
     if (!window.RizzoraChat.resumeGuestDraft()) { closeDialog(); route(); }

@@ -85,7 +85,7 @@ window.createRizzoraPortalAuth = ({ content, show, onAuthenticated, service = wi
     const back = step !== "methods" ? `<button class="auth-back" type="button" data-auth-back aria-label="Back">${icon("arrow")}</button>` : "";
     let body = "";
     if (step === "methods") {
-      body = `<p class="auth-subtitle">Your next conversation starts here.</p><div class="auth-providers">
+      body = `<p class="auth-subtitle">${characterName ? "Your draft will be here after you sign in. You can edit it before sending." : "Your next conversation starts here."}</p><div class="auth-providers">
         <button class="auth-provider" type="button" data-auth="google">${icon("google")}<span>Continue with Google</span>${icon("external")}</button>
         <button class="auth-provider" type="button" data-auth="facebook">${icon("facebook")}<span>Continue with Facebook</span>${icon("external")}</button>
         </div><div class="auth-divider"><span>or</span></div>

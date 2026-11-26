@@ -58,7 +58,7 @@
             <button type="button" data-show-hero="hayes" aria-label="Show Hayes" title="Hayes" aria-pressed="false"><img src="assets/hero-stills-4x3-v1/hayes-thumb.webp" width="48" height="48" alt=""></button>
           </div>
           <div class="hero-links">
-            <a class="button button-primary hero-cta" href="#character/chris">Meet Chris <img class="icon" src="assets/arrow.svg" alt=""></a>
+            <a class="button button-primary hero-cta" href="#chat/chris">Meet Chris <img class="icon" src="assets/arrow.svg" alt=""></a>
             <a class="hero-secondary" href="#discover">Explore the characters</a>
           </div>
         </div>
@@ -130,6 +130,13 @@
     </div>
 
     <section id="discover-view" class="discover-view section-wrap" aria-labelledby="discover-title" hidden>
+      <div class="recent-stack" hidden>
+        <a class="recent-pill" id="recent-conversation">
+          <img class="recent-avatar" alt="" width="24" height="24">
+          <span class="recent-message"></span>
+          <span class="recent-unread" hidden></span>
+        </a>
+      </div>
       <header class="discovery-heading">
         <h1 id="discover-title">Find your kind of spark.</h1>
       </header>
@@ -140,7 +147,6 @@
         <div class="deck-mobile-caption" aria-hidden="true"><strong></strong><span></span></div>
         <span class="deck-status" role="status"></span>
       </section>
-      <section class="discovery-band" id="continue-band" hidden><h2>Continue your conversation.</h2><div class="ip-continue" id="continue-characters"></div></section>
       <h2 class="all-characters-title">All characters</h2>
       <div class="discovery-search"><span class="search-symbol icon" aria-hidden="true"></span><input id="character-search" type="search" placeholder="Search companions, interests, personalities..." aria-label="Search companions"></div>
       <div class="filter-row">

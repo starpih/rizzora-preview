@@ -1,18 +1,21 @@
 (() => {
-  // Deliberately memory-only: no message storage, network requests or trial charges.
+  // Demo conversations stay in memory unless the user enables tab storage.
+  const historyKey = 'rizzora.preview.tab-conversations.v1';
+  let keepHistory = false;
   const threads = new Map();
   let host;
   let activeId;
   let lastOpened;
+  let pendingPhoto = null;
+  let openPhoto;
+  dialog.addEventListener('close', () => { if (!signedIn) pendingPhoto = null; });
   let historySearch = '';
   const clock = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' });
   const compactChat = matchMedia('(max-width: 760px)');
   const guestThreads = new Map();
-  let sendOnOpen;
   let disposeProfile = () => {};
   const byId = id => characters.find(c => c.id === id);
   const escape = value => { const node = document.createElement('span'); node.textContent = value; return node.innerHTML; };
-  const prompts = ['I could use a quiet moment.', 'Something good happened today.', 'Tell me about your world.'];
   const replies = {
     chris: ['We can take it slowly. Would you like to talk about your day, or find a lighter place to start?', 'Then we should make a little room for that. What was the best part?', 'The song is still playing, and there is a spot on the sofa. What would you put on next?'],
     kim: ['Let’s leave the rush outside for a moment. Would a favorite song help, or would you rather talk?', 'I want to hear this one. What made you smile?', 'Rehearsal is over, but the encore is still in my head. What song has been following you around?'],
@@ -22,10 +25,24 @@
   };
   function thread(id) {
     const store = signedIn ? threads : guestThreads;
-    if (!store.has(id)) store.set(id, { messages: [{ role: 'assistant', text: byId(id).greeting, time: Date.now() }], stamina: 100, unread: 0, draft: '', pending: false, timer: null });
+    if (!store.has(id)) {
+      const time = Date.now();
+      const messages = [{ role: 'assistant', text: byId(id).greeting, time }];
+      if (id === 'chris') {
+        messages.push({ role: 'assistant', type: 'voice', text: 'Voice message', time,
+          audio: 'assets/chat-media/chris-note.mp3', duration: 7,
+          transcript: 'I kept a little quiet for you. Tell me how you actually feel, not the polite version.',
+          peaks: [3, 3, 3, 3, 3, 3, 3, 10, 13, 3, 3, 6, 23, 19, 14, 6, 3, 3, 3, 11, 12, 11, 11, 11, 8, 7, 15, 8, 14, 17, 6, 3] });
+        messages.push({ role: 'assistant', type: 'photo', text: 'Photo', time,
+          src: 'assets/hero-stills-4x3-v1/01-chris-home.webp', alt: 'Chris at home', galleryIndex: 1 });
+      }
+      store.set(id, { messages, stamina: 100, unread: 0, draft: '', pending: false, timer: null });
+    }
     return store.get(id);
   }
   function replyFor(id, text, count) {
+    const starter = byId(id).conversationStarters.find(option => text.toLowerCase().includes(option.message.toLowerCase()));
+    if (starter) return starter.reply;
     const theme = /tired|quiet|sad|stress|hard|lonely|累/i.test(text) ? 0 : /good|happy|smile|great|开心/i.test(text) ? 1 : /world|music|song|book|tell me|兴趣/i.test(text) ? 2 : count % 3;
     return replies[id][theme];
   }
@@ -42,6 +59,64 @@
   function recentThreads() {
     return [...threads.entries()].sort((a, b) => b[1].messages.at(-1).time - a[1].messages.at(-1).time);
   }
+  function recentConversations() {
+    if (!signedIn) return [];
+    return recentThreads()
+      .filter(([, state]) => state.messages.some(message => message.role === 'user'))
+      .map(([id, state]) => ({ id, message: state.messages.at(-1), unread: state.unread }));
+  }
+  function saveTab() {
+    if (!keepHistory || !signedIn) return;
+    const history = recentConversations().map(({ id }) => {
+      const state = threads.get(id);
+      const first = state.messages.findIndex(message => message.role === 'user');
+      return { id, messages: state.messages.slice(first), unread: state.unread, stamina: state.stamina, draft: state.draft };
+    });
+    try {
+      sessionStorage.setItem(historyKey, JSON.stringify({ history, account: window.RizzoraIP.demoBenefits() }));
+    } catch {
+      keepInTab(false);
+      const checkbox = document.querySelector('#keep-demo-chats');
+      if (checkbox) checkbox.checked = false;
+    }
+  }
+  function keepInTab(enabled) {
+    keepHistory = Boolean(enabled && signedIn && !window.RizzoraAuthService);
+    if (keepHistory) saveTab();
+    else {
+      try { sessionStorage.removeItem(historyKey); } catch { /* Storage is unavailable. */ }
+    }
+    return keepHistory;
+  }
+  function restoreTab() {
+    if (window.RizzoraAuthService) return false;
+    try {
+      const snapshot = JSON.parse(sessionStorage.getItem(historyKey));
+      if (!Array.isArray(snapshot?.history)) return false;
+      const history = snapshot.history.filter(entry => byId(entry?.id) && Array.isArray(entry.messages)
+        && entry.messages[0]?.role === 'user' && entry.messages.every(message => message
+          && ['user', 'assistant'].includes(message.role) && typeof message.text === 'string' && Number.isFinite(message.time)));
+      if (!history.length) return false;
+      showSignedInAccount();
+      window.RizzoraIP.restoreDemoBenefits(snapshot.account);
+      for (const entry of history) {
+        const state = thread(entry.id);
+        for (const { role, time, text, newArrival } of entry.messages) state.messages.push({ role, time, text, newArrival: Boolean(newArrival) });
+        state.unread = Math.max(0, Number(entry.unread) || 0);
+        state.stamina = Math.max(0, Math.min(100, Number(entry.stamina) || 0));
+        state.draft = typeof entry.draft === 'string' ? entry.draft : '';
+        const last = state.messages.at(-1);
+        if (last.role === 'user') {
+          state.pending = true;
+          scheduleReply(entry.id, state, last.text);
+        }
+      }
+      keepHistory = true;
+      refreshHistory();
+      return true;
+    } catch { return false; }
+  }
+  window.addEventListener('pagehide', saveTab);
   function historyPane() {
     return `<aside class="chat-history" aria-label="Conversation history">
       <header><h2>Messages</h2><a class="history-new" href="#discover" aria-label="Find a companion" title="Find a companion">+</a></header>
@@ -52,6 +127,7 @@
   }
   function refreshHistory() {
     updateUnreadCount([...threads.values()].reduce((total, t) => total + t.unread, 0));
+    if (location.hash === '#discover') window.RizzoraIP?.renderRecentChats();
     const list = host?.querySelector('.history-threads');
     if (!list || host.hidden) return;
     const query = historySearch.trim().toLowerCase();
@@ -85,6 +161,45 @@
       status.classList.toggle('is-offline', !navigator.onLine);
     }
   }
+  function voiceMessage(message) {
+    const note = document.createElement('div');
+    note.className = 'voice-note';
+    note.innerHTML = `<div class="voice-controls"><button class="voice-play" type="button" aria-label="Play voice message"></button><span class="voice-wave" aria-hidden="true"></span><span class="voice-duration"></span><button type="button" class="voice-transcribe" aria-label="Show transcript" title="Show transcript" aria-expanded="false">Aa</button></div><p class="voice-transcript" hidden></p><audio preload="none"></audio>`;
+    const audio = note.querySelector('audio');
+    audio.src = message.audio;
+    const play = note.querySelector('.voice-play');
+    const duration = note.querySelector('.voice-duration');
+    const wave = note.querySelector('.voice-wave');
+    message.peaks.forEach(height => {
+      const bar = document.createElement('i');
+      bar.style.height = height + 'px';
+      wave.append(bar);
+    });
+    const clockTime = seconds => Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
+    const update = () => {
+      const total = Number.isFinite(audio.duration) ? audio.duration : message.duration;
+      duration.textContent = clockTime(audio.currentTime) + ' / ' + clockTime(total);
+      play.classList.toggle('playing', !audio.paused);
+      play.setAttribute('aria-label', audio.paused ? 'Play voice message' : 'Pause voice message');
+      Array.from(wave.children).forEach((bar, i) => bar.classList.toggle('played', i < wave.childElementCount * audio.currentTime / total));
+    };
+    play.addEventListener('click', async () => {
+      if (!audio.paused) { audio.pause(); return; }
+      try { await audio.play(); } catch { duration.textContent = 'Audio unavailable'; }
+    });
+    ['play', 'pause', 'timeupdate', 'loadedmetadata', 'ended'].forEach(event => audio.addEventListener(event, update));
+    update();
+    const toggle = note.querySelector('.voice-transcribe');
+    const transcript = note.querySelector('.voice-transcript');
+    transcript.textContent = message.transcript;
+    toggle.addEventListener('click', () => {
+      transcript.hidden = !transcript.hidden;
+      toggle.setAttribute('aria-expanded', String(!transcript.hidden));
+      toggle.title = transcript.hidden ? 'Show transcript' : 'Hide transcript';
+      toggle.setAttribute('aria-label', toggle.title);
+    });
+    return note;
+  }
   function renderMessages(id) {
     if (!visible(id)) return;
     const state = thread(id);
@@ -98,17 +213,36 @@
       const label = document.createElement('span');
       label.className = 'chat-speaker';
       label.textContent = message.role === 'user' ? 'You' : byId(id).shortName;
-      const text = document.createElement('p');
-      text.className = 'chat-bubble';
-      text.textContent = message.text;
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      if (message.type === 'voice') {
+        bubble.append(voiceMessage(message));
+      } else if (message.type === 'photo') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'chat-photo';
+        button.setAttribute('aria-label', 'Open photo: ' + message.alt);
+        const picture = document.createElement('img');
+        picture.src = message.src;
+        picture.alt = message.alt;
+        button.append(picture);
+        button.addEventListener('click', () => openPhoto(message.galleryIndex, button));
+        bubble.append(button);
+      } else {
+        const text = document.createElement('p');
+        text.textContent = message.text;
+        bubble.append(text);
+      }
       const time = document.createElement('time');
       time.textContent = clock.format(message.time);
       time.dateTime = new Date(message.time).toISOString();
       if (message.newArrival) { time.className = 'chat-new-arrival'; time.setAttribute('aria-label', 'New message, ' + time.textContent); }
-      item.append(label, text, time); log.append(item);
+      bubble.append(time);
+      item.append(label, bubble);
+      log.append(item);
     });
     host.querySelector('#chat-status').textContent = state.pending ? `${byId(id).shortName} is replying…` : '';
-    host.querySelector('.chat-starters').hidden = state.messages.length > 1;
+    if (state.messages.some(message => message.role === 'user')) host.querySelector('.chat-starters').hidden = true;
     updateComposer(id);
     if (followLatest || state.pending) log.scrollTop = log.scrollHeight;
   }
@@ -139,11 +273,16 @@
     host.querySelectorAll('.chat-new-arrival').forEach(time => time.classList.remove('chat-new-arrival'));
     renderMessages(id);
     host.querySelector('#chat-message').focus({ preventScroll: true });
+    saveTab();
+    scheduleReply(id, state, text);
+  }
+  function scheduleReply(id, state, text) {
     state.timer = setTimeout(() => {
       const unread = !roomIsRead(id);
       if (unread) state.unread++;
       state.messages.push({ role: 'assistant', time: Date.now(), newArrival: unread, text: replyFor(id, text, state.messages.filter(m => m.role === 'user').length - 1) });
       state.pending = false; state.timer = null;
+      saveTab();
       renderMessages(id);
       refreshHistory();
     }, 550);
@@ -178,8 +317,7 @@
     const facts = [['Birthday',c.profile?.birthday?.replaceAll('/','-')], ['Height',c.profile?.height], ['Zodiac Signs',c.profile?.zodiac], ['MBTI',c.profile?.mbti], ['Nationality',c.nationality], ['Occupation',c.profession]];
     panel.innerHTML = `<div class="chat-profile-top"><button type="button" class="chat-profile-close" aria-label="Close profile">×</button></div>
       <div class="chat-profile-media"><img class="chat-profile-portrait" src="${c.image}" alt="${c.name}, a fictional AI companion">
-      <div class="gallery-lock" hidden><span class="lock-icon" aria-hidden="true"></span><strong>VIP portrait</strong><a href="#membership">Unlock with VIP</a></div>
-      <div class="chat-profile-media-actions"><button type="button" data-profile-zoom aria-label="View full portrait">+</button></div></div>
+      <button class="portrait-open" type="button" data-profile-zoom aria-label="Browse ${c.shortName}’s photos"></button></div>
       ${pictures.length > 1 ? `<div class="chat-profile-gallery" role="group" aria-label="Profile images"><button type="button" data-profile-step="-1" aria-label="Previous profile photo">‹</button>${pictures.map((picture, index) => `<button type="button" data-profile-image="${index}" aria-label="${picture.label}" aria-pressed="${index === 0}">${locked(picture) ? '<span class="lock-icon" aria-hidden="true"></span>' : `<img src="${picture.src}" alt="">`}</button>`).join('')}<button type="button" data-profile-step="1" aria-label="Next profile photo">›</button></div>` : ''}
       <div class="chat-profile-copy"><div class="chat-profile-identity"><h2 id="chat-profile-title">${c.name}</h2><button type="button" data-profile-details aria-controls="chat-profile-details" aria-expanded="true" aria-label="Collapse profile details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M5 17c0-5 8-5 8 0m2-9h4m-4 4h4m-4 4h4"/></svg></button></div>
       <p class="chat-profile-session">Fictional AI companion · demo</p>
@@ -188,7 +326,7 @@
       <section class="chat-profile-attribute">${glyph('Hobbies')}<div><h3>Hobbies</h3><p>${c.profile?.hobbies || c.interests.join(' · ')}</p></div></section>
       <section class="chat-profile-attribute">${glyph('Personality')}<div><h3>Personality</h3><div class="chat-profile-tags">${(c.profile?.traits || c.traits).map(trait=>`<span>${trait}</span>`).join('')}</div></div></section>
       <section><h3>A moment with ${c.shortName}</h3><p>${story}</p></section></div>
-      <a class="chat-full-profile" href="#character/${c.id}">Full profile <span aria-hidden="true">→</span></a>
+
       <p class="chat-profile-note">A fictional AI character. Profile copy is a creative preview.</p></div>`;
     slot.append(panel);
     const sync = () => {
@@ -217,18 +355,6 @@
     });
     let pictureIndex = 0;
     const portrait = panel.querySelector('.chat-profile-portrait');
-    const pickPicture = index => {
-      pictureIndex = (index + pictures.length) % pictures.length;
-      const isLocked = locked(pictures[pictureIndex]);
-      panel.querySelector('.gallery-lock').hidden = !isLocked;
-      panel.querySelector('.chat-profile-media-actions').hidden = isLocked;
-      portrait.src = isLocked ? c.image : pictures[pictureIndex].src;
-      portrait.classList.toggle('locked-preview', isLocked);
-      portrait.alt = `${c.shortName} · ${pictures[pictureIndex].label}`;
-      panel.querySelectorAll('[data-profile-image]').forEach(item => item.setAttribute('aria-pressed', String(Number(item.dataset.profileImage) === pictureIndex)));
-    };
-    panel.querySelectorAll('[data-profile-image]').forEach(button => button.addEventListener('click', () => pickPicture(Number(button.dataset.profileImage))));
-    panel.querySelectorAll('[data-profile-step]').forEach(button => button.addEventListener('click', () => pickPicture(pictureIndex + Number(button.dataset.profileStep))));
     panel.querySelector('[data-profile-details]').addEventListener('click', event => {
       const button = event.currentTarget;
       const details = panel.querySelector('#chat-profile-details');
@@ -239,17 +365,88 @@
     const zoom = document.createElement('dialog');
     zoom.className = 'chat-portrait-zoom';
     zoom.setAttribute('aria-label', `${c.shortName} full portrait`);
-    zoom.innerHTML = '<button type="button" aria-label="Close full portrait">×</button><img alt="">';
+    zoom.innerHTML = `<button type="button" class="viewer-close" aria-label="Close photo viewer">×</button>
+      <div class="viewer-stage"><img alt=""><div class="gallery-lock" hidden><span class="lock-icon" aria-hidden="true"></span><strong>VIP portrait</strong><a class="button button-primary" href="#membership">Unlock with VIP</a></div></div>
+      <div class="viewer-controls"><button type="button" data-step="-1" aria-label="Previous photo">‹</button><span aria-live="polite"></span><button type="button" data-step="1" aria-label="Next photo">›</button></div>`;
     host.append(zoom);
-    panel.querySelector('[data-profile-zoom]').addEventListener('click', () => {
-      zoom.querySelector('img').src = portrait.src;
-      zoom.querySelector('img').alt = portrait.alt;
-      zoom.showModal();
+    const preview = zoom.querySelector('img');
+    let returnTo;
+    const select = index => {
+      pictureIndex = (index + pictures.length) % pictures.length;
+      const photo = pictures[pictureIndex];
+      const isLocked = locked(photo);
+      preview.hidden = isLocked;
+      if (isLocked) preview.removeAttribute('src');
+      else { preview.src = photo.src; preview.alt = c.shortName + ' · ' + photo.label; }
+      zoom.querySelector('.gallery-lock').hidden = !isLocked;
+      zoom.querySelector('.viewer-controls span').textContent = photo.label + ' · ' + (pictureIndex + 1) + ' / ' + pictures.length;
+      portrait.src = isLocked ? c.image : photo.src;
+      portrait.classList.toggle('locked-preview', isLocked);
+      panel.querySelectorAll('[data-profile-image]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.profileImage) === pictureIndex)));
+    };
+    openPhoto = (index, opener) => {
+      if (!signedIn) {
+        pendingPhoto = { id: c.id, index };
+        portalAuth.open({});
+        return;
+      }
+      returnTo = opener;
+      select(index);
+      if (!zoom.open) zoom.showModal();
+    };
+    panel.querySelector('[data-profile-zoom]').addEventListener('click', event => openPhoto(pictureIndex, event.currentTarget));
+    panel.querySelectorAll('[data-profile-image]').forEach(button => button.addEventListener('click', () => openPhoto(Number(button.dataset.profileImage), button)));
+    panel.querySelectorAll('[data-profile-step]').forEach(button => button.addEventListener('click', () => openPhoto(pictureIndex + Number(button.dataset.profileStep), button)));
+    zoom.querySelectorAll('[data-step]').forEach(button => button.addEventListener('click', () => select(pictureIndex + Number(button.dataset.step))));
+    zoom.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        select(pictureIndex + (event.key === 'ArrowLeft' ? -1 : 1));
+      }
     });
-    zoom.querySelector('button').addEventListener('click', () => zoom.close());
+    zoom.querySelector('.gallery-lock a').addEventListener('click', () => window.RizzoraIP.rememberUpgradePhoto(c.id, pictureIndex));
+    zoom.querySelector('.viewer-close').addEventListener('click', () => zoom.close());
+    zoom.addEventListener('close', () => { if (returnTo?.isConnected) returnTo.focus({preventScroll:true}); });
     compact.addEventListener('change', sync);
     sync();
+    if (signedIn && pendingPhoto?.id === c.id) {
+      const { index } = pendingPhoto;
+      pendingPhoto = null;
+      openPhoto(index, compact.matches ? trigger : panel.querySelector('[data-profile-zoom]'));
+    }
     disposeProfile = () => { if (zoom.open) zoom.close(); compact.removeEventListener('change', sync); if (drawer.open) drawer.close(); disposeProfile = () => {}; };
+  }
+  async function showStarters(character, state, group, input) {
+    if (state.messages.some(message => message.role === 'user')) return;
+    // The integration provides getConversationStarters(characterId) -> Promise<string[]>.
+    // With no provider installed, the static preview uses its character samples.
+    const provider = window.RizzoraChatService;
+    let lines;
+    try {
+      state.starters ??= provider
+        ? Promise.resolve(provider.getConversationStarters(character.id))
+        : character.conversationStarters.map(starter => starter.message);
+      lines = await state.starters;
+    } catch {
+      delete state.starters;
+      return;
+    }
+    if (!Array.isArray(lines) || !group.isConnected || state.messages.some(message => message.role === 'user')) return;
+    for (const line of lines) {
+      if (typeof line !== 'string' || !line.trim() || line.length > input.maxLength) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.chatPrompt = '';
+      button.textContent = line.trim();
+      button.addEventListener('click', () => {
+        state.draft = input.value = button.textContent;
+        updateComposer(character.id);
+        input.focus();
+      });
+      group.append(button);
+      if (group.childElementCount === 2) break;
+    }
+    group.hidden = !group.childElementCount;
   }
   function render(container, id) {
     disposeProfile(); host = container; activeId = null;
@@ -273,8 +470,7 @@
     document.title = `Chat with ${c.shortName} | Rizzora`;
     const state = thread(id);
     if (!state.unread) state.messages.forEach(message => { message.newArrival = false; });
-    if (signedIn) window.RizzoraIP.rememberChat(id);
-    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="${signedIn ? '#chat' : '#discover'}" aria-label="${signedIn ? 'Back to conversations' : 'Discover companions'}">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} demo stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Demo stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div></header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" aria-label="Conversation starters">${prompts.map((prompt,index) => `<button type="button" data-chat-prompt="${index}">${prompt}</button>`).join('')}</div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…" aria-describedby="chat-keyboard"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div><div class="chat-tools"><small id="chat-keyboard">Enter to send · Shift + Enter for a new line</small></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
+    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="${signedIn ? '#chat' : '#discover'}" aria-label="${signedIn ? 'Back to conversations' : 'Discover companions'}">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} demo stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Demo stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div></header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" role="group" aria-label="Conversation starters" hidden></div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
     bindHistory();
     clearUnread();
     updatePresence();
@@ -287,19 +483,14 @@
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) { event.preventDefault(); send(id); }
     });
     host.querySelector('#chat-form').addEventListener('submit', event => { event.preventDefault(); send(id); });
-    host.querySelectorAll('[data-chat-prompt]').forEach(button => button.addEventListener('click', () => { input.value = prompts[Number(button.dataset.chatPrompt)]; state.draft = input.value; updateComposer(id); input.focus(); }));
+    showStarters(c, state, host.querySelector('.chat-starters'), input);
     renderMessages(id);
-    if (sendOnOpen === id) {
-      sendOnOpen = null;
-      send(id);
-    }
   }
   function resumeGuestDraft() {
     const draft = guestThreads.get(activeId)?.draft;
     guestThreads.clear();
-    if (!draft) return false;
-    thread(activeId).draft = draft;
-    if (pendingChat) sendOnOpen = activeId;
+    if (!draft && !pendingPhoto) return false;
+    if (draft) thread(activeId).draft = draft;
     closeDialog();
     navigateTo('chat/' + activeId);
     return true;
@@ -308,5 +499,8 @@
   window.addEventListener('offline', updatePresence);
   compactChat.addEventListener('change', clearUnread);
   document.addEventListener('visibilitychange', clearUnread);
-  window.RizzoraChat = { render, resumeGuestDraft, leave() { activeId = null; host = null; disposeProfile(); }, clear() { guestThreads.clear(); sendOnOpen = null; threads.forEach(state => clearTimeout(state.timer)); threads.clear(); activeId = lastOpened = null; historySearch = ''; } };
+  window.RizzoraChat = {
+    recentConversations, keepInTab, restoreTab, keepsInTab: () => keepHistory,
+    viewPhoto(index) { openPhoto(index, host.querySelector('[data-show-chat-profile]')); },
+    render, resumeGuestDraft, leave() { host?.querySelectorAll('audio').forEach(audio => audio.pause()); if (!signedIn) pendingPhoto = null; activeId = null; host = null; disposeProfile(); }, clear() { keepInTab(false); pendingPhoto = null; guestThreads.clear(); threads.forEach(state => clearTimeout(state.timer)); threads.clear(); activeId = lastOpened = null; historySearch = ''; } };
 })();

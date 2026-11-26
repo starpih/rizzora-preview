@@ -16,6 +16,16 @@ window.RizzoraCharacters = Object.freeze([
       "Photography",
       "Travel"
     ],
+    "conversationStarters": [
+      {
+        "message": "What caught your eye in that last photo?",
+        "reply": "The light on a shop window. For a second the whole street looked gold. What would you have pointed the camera at?"
+      },
+      {
+        "message": "Where would you take me to watch the sunset?",
+        "reply": "There’s a turn in the road where you can see the whole sky. I’d pull over there. Would you bring a camera or just sit with me?"
+      }
+    ],
     "summary": "Sunset chaser. A little playful. Always curious.",
     "greeting": "Hey, I'm Chris. What would you like to talk about?",
     "profile": {
@@ -48,6 +58,16 @@ window.RizzoraCharacters = Object.freeze([
     "interests": [
       "Music",
       "Dance"
+    ],
+    "conversationStarters": [
+      {
+        "message": "Which move took you the longest to learn?",
+        "reply": "That turn at the end of rehearsal. I kept landing a beat early. Want me to count you in?"
+      },
+      {
+        "message": "What song gets you moving after a long rehearsal?",
+        "reply": "Something with a bass line I can follow all the way home. What would you put on next?"
+      }
     ],
     "summary": "Seoul days, favorite songs, and a healing smile.",
     "greeting": "Hi, I'm Kim. What's been on your playlist lately?",
@@ -82,6 +102,16 @@ window.RizzoraCharacters = Object.freeze([
     "interests": [
       "Motorsport",
       "Cooking"
+    ],
+    "conversationStarters": [
+      {
+        "message": "What are you cooking tonight?",
+        "reply": "Pasta with a handful of basil. Taste the sauce for me? I can never decide if it needs more lemon."
+      },
+      {
+        "message": "Where would you go for a quiet drive?",
+        "reply": "I’d take the coast road and stop wherever we could hear the water. Are you picking the music?"
+      }
     ],
     "summary": "Fast cars. Slow evenings. A thoughtful listener.",
     "greeting": "Ciao, I'm Enzo. How has your day been?",
@@ -118,6 +148,16 @@ window.RizzoraCharacters = Object.freeze([
       "Jazz",
       "Literature"
     ],
+    "conversationStarters": [
+      {
+        "message": "What are you playing on the piano tonight?",
+        "reply": "A little waltz. I keep changing the last chord. Want to hear the dreamy ending or the restless one?"
+      },
+      {
+        "message": "What book would you lend me for the weekend?",
+        "reply": "Probably the one with all my pencil marks. Half the fun would be hearing which lines you’d underline."
+      }
+    ],
     "summary": "Unfinished jazz and a little room for possibility.",
     "greeting": "Hi, I'm Julian. Shall we start with a story or a song?",
     "profile": {
@@ -149,6 +189,16 @@ window.RizzoraCharacters = Object.freeze([
     "interests": [
       "Bookshops",
       "Reading"
+    ],
+    "conversationStarters": [
+      {
+        "message": "Which shelf should we look at first?",
+        "reply": "The secondhand shelf by the window. Sometimes someone leaves a note between the pages. Shall we look?"
+      },
+      {
+        "message": "How would you spend a rainy afternoon?",
+        "reply": "By the bookshop window, with a warm cup and nowhere else to be. Would you read or watch the rain?"
+      }
     ],
     "summary": "Rainy afternoons, bookmarked pages, and a story to return to.",
     "greeting": "Hi, I’m Hayes. Shall we talk about a story, or about your day?"

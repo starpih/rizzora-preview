@@ -44,7 +44,7 @@
     story.textContent = slide.dataset.story || firstStory;
     portraits.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.showHero === slide.dataset.heroCharacter)));
     const profile = window.RizzoraCharacters.find((c) => c.id === slide.dataset.heroCharacter);
-    cta.href = profile ? `#character/${profile.id}` : "#discover";
+    cta.href = profile ? `#chat/${profile.id}` : "#discover";
     explore.hidden = !profile;
     cta.innerHTML = `${profile ? `Meet ${slide.dataset.heroName}` : "Explore the characters"} <img class="icon" src="assets/arrow.svg" alt="">`;
     sync();
