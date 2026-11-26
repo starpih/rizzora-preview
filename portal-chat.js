@@ -6,10 +6,12 @@
   let host;
   let activeId;
   let lastOpened;
+  let profileCollapsed = false;
+  let pendingGame = null;
   let pendingPhoto = null;
   let requestedActivity = null;
   let openPhoto;
-  dialog.addEventListener('close', () => { if (!signedIn) pendingPhoto = null; });
+  dialog.addEventListener('close', () => { if (!signedIn) { pendingPhoto = null; pendingGame = null; } });
   let historySearch = '';
   const clock = new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' });
   const compactChat = matchMedia('(max-width: 760px)');
@@ -63,7 +65,7 @@
     return nearLatest() && visible(id) && !document.hidden && !(location.hash === '#chat' && compactChat.matches);
   }
   function recentThreads() {
-    return [...threads.entries()].sort((a, b) => b[1].messages.at(-1).time - a[1].messages.at(-1).time);
+    return [...threads.entries()].filter(([,t])=>t.messages.some(m=>m.role==='user')).sort((a, b) => b[1].messages.at(-1).time - a[1].messages.at(-1).time);
   }
   function userHistory() {
     if (!signedIn) return [];
@@ -73,21 +75,47 @@
     const {level}=window.RizzoraCenter.progress(userHistory());
     return window.RizzoraCenter.activities.filter(a=>a.level<=level);
   }
-  function openActivities(id, level) {
+  const toolPaths = {
+    video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+    phone: '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>',
+    play: '<path d="M7.5 7h9a4 4 0 0 1 3.9 3.1l1.1 5.5a2.6 2.6 0 0 1-4.4 2.3L15 16H9l-2.1 2a2.6 2.6 0 0 1-4.4-2.4l1.1-5.5A4 4 0 0 1 7.5 7Z"/><path d="M7 11v3m-1.5-1.5h3M15 11h.01M17 13h.01"/>',
+    panel: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M16 4v16"/><path class="panel-arrow" d="m8 9 3 3-3 3"/>'
+  };
+  const toolIcon = key => `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${toolPaths[key]}</svg>`;
+  function chatTools() {
+    const calls=[['video','Video call'],['phone','Voice call']].map(([key,label])=>`<button type="button" class="call-soon" aria-disabled="true" aria-label="${label}, coming soon">${toolIcon(key)}<span class="call-tip" aria-hidden="true">${label} · Coming soon</span></button>`).join('');
+    return `<div class="chat-tools" role="group" aria-label="Chat tools">${calls}<button class="play-launch" type="button" aria-label="Play" title="Play">${toolIcon('play')}<span>Play</span></button><button class="profile-toggle" type="button" aria-label="Hide profile">${toolIcon('panel')}</button></div>`;
+  }
+  function openGames(id,level,autoStory=false) {
+    const c=byId(id);
+    const menu=()=>openGames(id);
+    function upgrade() {
+      if (!signedIn) { pendingGame=id; portalAuth.open({character:c.shortName}); return; }
+      showDialog(`<h2 id="dialog-title">Between the lines</h2><p>Play a private branching story with ${c.shortName} with Rizzora VIP.</p><div class="ip-actions"><a class="button button-primary" href="#membership">Explore VIP</a><button class="text-link" type="button">All games</button></div>`);
+      dialogContent.querySelector('a').onclick=()=>window.RizzoraIP.rememberGame(id);
+      dialogContent.querySelector('.text-link').onclick=menu;
+    }
+    const games=window.RizzoraPlay.render(c,menu,upgrade);
+    if (autoStory) { games.story(); return; }
     const options=unlockedActivities().filter(a=>!level || a.level===level);
-    const character=byId(id);
-    showDialog(`<h2 id="dialog-title">Play with ${character.shortName}</h2><div class="dialog-stack">${options.map((a,i)=>`<button type="button" data-activity="${i}">${a.name}</button>`).join('')}</div>`);
-    dialogContent.querySelectorAll('[data-activity]').forEach((b,i)=>b.onclick=()=>{
+    if (!level) {
+      window.RizzoraMoments.open(c, games, options, startActivity);
+      return;
+    }
+    function startActivity(activity) {
       closeDialog();
-      const input=host.querySelector('#chat-message');
-      input.value=thread(id).draft=options[i].prompt;
-      updateComposer(id); input.focus();
-    });
+      const input = host.querySelector('#chat-message');
+      input.value = thread(id).draft = activity.prompt;
+      updateComposer(id);
+      input.focus();
+    }
+    showDialog(`<h2 id="dialog-title">Play with ${c.shortName}</h2><div class="game-options">
+      ${options.map((a,i)=>`<button class="game-choice" type="button" data-activity="${i}">${a.name}</button>`).join('')}</div>`);
+    dialogContent.querySelectorAll('[data-activity]').forEach((button,i)=>button.onclick=()=>startActivity(options[i]));
   }
   function recentConversations() {
     if (!signedIn) return [];
     return recentThreads()
-      .filter(([, state]) => state.messages.some(message => message.role === 'user'))
       .map(([id, state]) => ({ id, message: state.messages.at(-1), unread: state.unread }));
   }
   function saveTab() {
@@ -268,8 +296,6 @@
     });
     host.querySelector('#chat-status').textContent = state.pending ? `${byId(id).shortName} is replying…` : '';
     if (state.messages.some(message => message.role === 'user')) host.querySelector('.chat-starters').hidden = true;
-    const play = host.querySelector('.chat-activities');
-    play.hidden = !signedIn || !unlockedActivities().length;
     updateComposer(id);
     if (followLatest || state.pending) log.scrollTop = log.scrollHeight;
   }
@@ -342,7 +368,7 @@
     };
     const glyph = label => `<span class="chat-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths[label] || paths.MBTI}</svg></span>`;
     const facts = [['Birthday',c.profile?.birthday?.replaceAll('/','-')], ['Height',c.profile?.height], ['Zodiac Signs',c.profile?.zodiac], ['MBTI',c.profile?.mbti], ['Nationality',c.nationality], ['Occupation',c.profession]];
-    panel.innerHTML = `<div class="chat-profile-top"><button type="button" class="chat-profile-close" aria-label="Close profile">×</button></div>
+    panel.innerHTML = `<div class="chat-profile-top"><button type="button" class="chat-profile-close" aria-label="Close profile">${toolIcon('panel')}</button></div>
       <div class="chat-profile-media"><img class="chat-profile-portrait" src="${c.image}" alt="${c.name}, a fictional AI companion">
       <button class="portrait-open" type="button" data-profile-zoom aria-label="Browse ${c.shortName}’s photos"></button></div>
       ${pictures.length > 1 ? `<div class="chat-profile-gallery" role="group" aria-label="Profile images"><button type="button" data-profile-step="-1" aria-label="Previous profile photo">‹</button>${pictures.map((picture, index) => `<button type="button" data-profile-image="${index}" aria-label="${picture.label}" aria-pressed="${index === 0}">${locked(picture) ? '<span class="lock-icon" aria-hidden="true"></span>' : `<img src="${picture.src}" alt="">`}</button>`).join('')}<button type="button" data-profile-step="1" aria-label="Next profile photo">›</button></div>` : ''}
@@ -356,25 +382,48 @@
 
       <p class="chat-profile-note">A fictional AI character. Profile copy is a creative preview.</p></div>`;
     slot.append(panel);
-    const sync = () => {
+    const toggle=host.querySelector('.profile-toggle');
+    const layout=host.querySelector('.chat-layout');
+    drawer.id='chat-profile-drawer';
+    function sync() {
       if (compact.matches) {
-        drawer.append(panel);
-        trigger.setAttribute('aria-controls', 'chat-profile-drawer');
-        trigger.setAttribute('aria-haspopup', 'dialog');
+        if(panel.parentNode!==drawer) drawer.append(panel);
       } else {
-        if (drawer.open) drawer.close();
-        slot.append(panel);
-        trigger.setAttribute('aria-controls', panel.id);
-        trigger.removeAttribute('aria-haspopup');
+        if(drawer.open) drawer.close();
+        if(panel.parentNode!==slot) slot.append(panel);
       }
-    };
-    drawer.id = 'chat-profile-drawer';
-    trigger.addEventListener('click', () => {
-      if (compact.matches) { drawer.showModal(); panel.querySelector('.chat-profile-close').focus(); }
-      else { panel.focus({ preventScroll: true }); panel.scrollTop = 0; }
+      const expanded=compact.matches?drawer.open:!profileCollapsed;
+      slot.hidden=!compact.matches && profileCollapsed;
+      layout.classList.toggle('profile-collapsed',slot.hidden);
+      for(const button of [toggle,trigger]) {
+        button.setAttribute('aria-controls',compact.matches?drawer.id:panel.id);
+        button.setAttribute('aria-expanded',String(expanded));
+        if(compact.matches) button.setAttribute('aria-haspopup','dialog');
+        else button.removeAttribute('aria-haspopup');
+      }
+      toggle.title=expanded?'Hide profile':'Show profile';
+      toggle.setAttribute('aria-label',toggle.title);
+    }
+    let opener=toggle;
+    function displayProfile(button) {
+      opener=button;
+      if(compact.matches) {
+        drawer.showModal();
+        panel.querySelector('.chat-profile-close').focus();
+      } else {
+        profileCollapsed=button===toggle?!profileCollapsed:false;
+      }
+      sync();
+      if(button===trigger && !compact.matches)panel.focus({preventScroll:true});
+    }
+    trigger.onclick=()=>displayProfile(trigger);
+    toggle.onclick=()=>displayProfile(toggle);
+    panel.querySelector('.chat-profile-close').onclick=()=>drawer.close();
+    drawer.addEventListener('close',()=>{
+      if(!toggle.isConnected)return;
+      sync();
+      if(compact.matches)opener.focus({preventScroll:true});
     });
-    panel.querySelector('.chat-profile-close').addEventListener('click', () => drawer.close());
-    drawer.addEventListener('close', () => { if (trigger.isConnected && location.hash === `#chat/${c.id}`) trigger.focus({ preventScroll: true }); });
     drawer.addEventListener('click', event => {
       if (event.target !== drawer) return;
       const bounds = drawer.getBoundingClientRect();
@@ -483,10 +532,14 @@
       return;
     }
     const inbox = signedIn && !id;
-    if (!id) id = signedIn ? lastOpened || recentThreads()[0]?.[0] : characters[0].id;
+    if (!id) {
+      const history=recentThreads();
+      id=signedIn ? (history.find(([key])=>key===lastOpened) || history[0])?.[0] : characters[0].id;
+    }
     if (!id) {
       host.innerHTML = `<div class="chat-layout empty-chat">${historyPane()}<section class="empty-room"><div>
-        <h1>No conversations yet</h1><p>Choose a companion and say hello.</p><a class="button button-primary" href="#discover">Explore the characters</a>
+        <h1>Who would you like to meet?</h1><p>Choose someone to start your first conversation.</p>
+        <div class="chat-recs">${characters.map(c=>`<a href="#chat/${c.id}"><img src="assets/discover-scenes/${c.id}.webp" alt=""><span><strong>${c.shortName}</strong><small>${c.interests.join(' · ')}</small></span></a>`).join('')}</div>
         </div></section></div>`;
       bindHistory(); return;
     }
@@ -497,13 +550,13 @@
     document.title = `Chat with ${c.shortName} | Rizzora`;
     const state = thread(id);
     if (!state.unread) state.messages.forEach(message => { message.newArrival = false; });
-    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="${signedIn ? '#chat' : '#discover'}" aria-label="${signedIn ? 'Back to conversations' : 'Discover companions'}">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div><button type="button" class="chat-activities" hidden>Activities</button></header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" role="group" aria-label="Conversation starters" hidden></div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
+    host.innerHTML = `<div class="chat-layout ${inbox ? 'show-inbox' : ''}">${historyPane()}<section class="chat-room" aria-label="Conversation with ${c.shortName}"><header class="chat-heading"><a class="chat-back" href="${signedIn ? '#chat' : '#discover'}" aria-label="${signedIn ? 'Back to conversations' : 'Discover companions'}">←</a><span class="avatar-wrap"><span class="stamina-ring" role="meter" aria-label="${c.shortName} stamina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${state.stamina}" title="Stamina: ${state.stamina}%" style="--remaining:${state.stamina}%"><img src="${c.image}" alt=""></span><button class="avatar-profile" type="button" data-show-chat-profile aria-label="${c.shortName}’s profile"></button></span><div><h1 tabindex="-1">${c.shortName}</h1><p class="chat-presence"></p></div>${chatTools()}</header><div class="chat-log" id="chat-log" role="log" aria-label="Messages with ${c.shortName}" aria-live="polite" aria-relevant="additions" tabindex="0"></div><div class="chat-starters" role="group" aria-label="Conversation starters" hidden></div><p class="chat-status" id="chat-status" role="status"></p><form id="chat-form" class="chat-composer"><label for="chat-message">Message ${c.shortName}</label><div class="chat-input-row"><textarea id="chat-message" rows="2" maxlength="1000" placeholder="Say something…"></textarea><button class="button button-primary" id="chat-send" type="submit">Send</button></div></form></section><div class="chat-profile-slot"></div><dialog class="chat-profile-dialog" aria-labelledby="chat-profile-title"></dialog></div>`;
     bindHistory();
     clearUnread();
     updatePresence();
     mountProfile(c);
     host.querySelector('#chat-log').addEventListener('scroll', clearUnread);
-    host.querySelector('.chat-activities').onclick = () => openActivities(id);
+    host.querySelector('.play-launch').onclick = () => openGames(id);
     const input = host.querySelector('#chat-message');
     input.value = state.draft;
     input.addEventListener('input', () => { state.draft = input.value; updateComposer(id); });
@@ -513,13 +566,14 @@
     host.querySelector('#chat-form').addEventListener('submit', event => { event.preventDefault(); send(id); });
     showStarters(c, state, host.querySelector('.chat-starters'), input);
     renderMessages(id);
-    if (requestedActivity?.id===id && signedIn) openActivities(id,requestedActivity.level);
+    if (requestedActivity?.id===id && signedIn) openGames(id,requestedActivity.level);
     requestedActivity=null;
+    if (pendingGame===id && signedIn) { pendingGame=null; openGames(id,null,true); }
   }
   function resumeGuestDraft() {
     const draft = guestThreads.get(activeId)?.draft;
     guestThreads.clear();
-    if (!draft && !pendingPhoto) return false;
+    if (!draft && !pendingPhoto && !pendingGame) return false;
     if (draft) thread(activeId).draft = draft;
     closeDialog();
     navigateTo('chat/' + activeId);
@@ -532,6 +586,7 @@
   window.RizzoraChat = {
     queueActivity(id,level) { requestedActivity={id,level}; },
     recentConversations, userHistory, saveTab, keepInTab, restoreTab, keepsInTab: () => keepHistory,
+    playStory(id) { if(activeId===id)openGames(id,null,true); },
     viewPhoto(index) { openPhoto(index, host.querySelector('[data-show-chat-profile]')); },
-    render, resumeGuestDraft, leave() { host?.querySelectorAll('audio').forEach(audio => audio.pause()); if (!signedIn) pendingPhoto = null; activeId = null; host = null; disposeProfile(); }, clear() { requestedActivity=null; keepInTab(false); pendingPhoto = null; guestThreads.clear(); threads.forEach(state => clearTimeout(state.timer)); threads.clear(); activeId = lastOpened = null; historySearch = ''; } };
+    render, resumeGuestDraft, leave() { host?.querySelectorAll('audio').forEach(audio => audio.pause()); if (!signedIn) { pendingGame=null; pendingPhoto=null; } activeId = null; host = null; disposeProfile(); }, clear() { profileCollapsed=false; pendingGame=null; requestedActivity=null; keepInTab(false); pendingPhoto = null; guestThreads.clear(); threads.forEach(state => clearTimeout(state.timer)); threads.clear(); activeId = lastOpened = null; historySearch = ''; } };
 })();

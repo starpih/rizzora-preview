@@ -9,6 +9,7 @@
   let checkoutDestination = null;
   let checkoutState = "review";
   let upgradePhoto = null;
+  let upgradeGame = null;
   let membership = null;
   let accountOrigin = "#home";
   let sampleCredits = 0;
@@ -211,8 +212,9 @@
     if (checkoutState !== "review") {
       const labels = { success: ["VIP is active.", `Confirmed with your ${membership?.method || "card"}. No payment was made.`], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
       const [title, detail] = labels[checkoutState];
+      const gameLink = upgradeGame ? `<a class="text-link" href="#chat/${upgradeGame}">Back to game</a>` : "";
       const photoLink = upgradePhoto ? `<a class="text-link" href="#chat/${upgradePhoto.id}">${checkoutState === "success" ? "View unlocked photo" : "Back to photo"}</a>` : "";
-      extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}${photoLink}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
+      extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}${photoLink}${gameLink}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
       return;
     }
     const plan = cycles[cycle];
@@ -278,7 +280,8 @@
       history.replaceState(history.state, "", "#" + hash);
     }
     const returnPhoto = upgradePhoto && hash === "chat/" + upgradePhoto.id ? upgradePhoto : null;
-    if (hash !== "membership" && hash !== "checkout") upgradePhoto = null;
+    const returnGame = upgradeGame && hash === "chat/"+upgradeGame ? upgradeGame : null;
+    if (hash !== "membership" && hash !== "checkout") { upgradePhoto = null; upgradeGame = null; }
     const onMembership = hash === "membership" || hash === "membership/stamina";
     const packId = hash.startsWith("stamina-checkout/") ? hash.slice("stamina-checkout/".length) : "";
     const onPackCheckout = Object.hasOwn(staminaPacks, packId);
@@ -308,18 +311,26 @@
     if (isHome && hash && hash !== "home") document.getElementById(hash)?.scrollIntoView();
     else if (hash === "membership/stamina") focusTarget.scrollIntoView({ block: "start" });
     else window.scrollTo({ top: 0, behavior: "instant" });
+    if (returnGame) window.RizzoraChat.playStory(returnGame);
     if (returnPhoto) window.RizzoraChat.viewPhoto(returnPhoto.index);
     window.RizzoraHero?.sync();
   }
   window.RizzoraIP = {
     route, renderRecentChats,
-    demoBenefits() { return { membership, sampleCredits }; },
+    demoBenefits() { return { membership, sampleCredits, moments: window.RizzoraMoments.snapshot() }; },
+    spendPlayStamina(amount) {
+      if (!signedIn || !Number.isSafeInteger(amount) || amount <= 0 || sampleCredits < amount) return false;
+      sampleCredits -= amount;
+      return true;
+    },
     restoreDemoBenefits(account) {
+      window.RizzoraMoments.restore(account?.moments);
       window.RizzoraCenter.restore(account?.profile);
       const plan = account?.membership;
       if (plan && Object.hasOwn(cycles, plan.cycle)) membership = { cycle: plan.cycle, renewal: Boolean(plan.renewal) };
       if (Number.isSafeInteger(account?.sampleCredits) && account.sampleCredits >= 0) sampleCredits = account.sampleCredits;
     },
+    rememberGame(id) { upgradeGame = id; },
     rememberUpgradePhoto(id, index) { upgradePhoto = { id, index }; },
     openAccount() {
       if (!["#account", "#checkout"].includes(location.hash)) accountOrigin = location.hash || "#home";
@@ -354,6 +365,7 @@
     }
     if (button.hasAttribute("data-signout")) {
       membership = null; sampleCredits = 0; completedPack = null; checkoutDestination = null;
+      window.RizzoraMoments.reset();
       window.RizzoraCenter.reset();
       window.RizzoraChat?.clear();
       if (location.hash === "#account") { account(); extra.querySelector("h1").focus(); }
