@@ -56,33 +56,53 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
 .ip-membership-layout, .ip-account-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 72px; align-items: start; }
 .vip-page { max-width: 1060px; margin-inline: auto; }
 .vip-intro {
-  display: flex; align-items: center; min-height: 224px; border-radius: 18px; overflow: hidden;
-  background: linear-gradient(90deg, #2c202f 30%, #2c202ff2 45%, #2c202f2b 78%),
-    url("assets/hero-stills-4x3-v1/01-chris-home.webp") right 28% / 52% auto no-repeat, #2c202f;
+  display: flex; align-items: center; min-height: clamp(300px, 30vw, 386px);
+  border-radius: 22px; overflow: hidden; background-color: #24191f;
+  background-image: linear-gradient(90deg, #21151df5, #231720df 25%, #251a2240 52%, transparent 70%), url("assets/membership/vip-cast.webp");
+  background-size: cover; background-position: center, center 29%;
 }
-.vip-intro-copy { width: 60%; padding: 28px clamp(22px, 4vw, 48px); }
-.vip-intro h1 { font: 500 clamp(40px, 5vw, 64px)/1 var(--font-display); }
-.vip-intro-copy > p { max-width: 38ch; margin: 12px 0 18px; color: var(--text-secondary); }
+.vip-intro-copy { padding: 30px clamp(24px, 4vw, 52px); width: 48%; }
+.vip-signature { display: flex; align-items: center; gap: 10px; color: #f5dba9; font: 650 12px/1.2 var(--font-body); letter-spacing: .16em; text-transform: uppercase; }
+.vip-signature img { width: 34px; height: 28px; }
+.vip-intro h1 { margin: 18px 0 14px; color: #fff5eb; font: 500 clamp(46px, 5.2vw, 72px)/.97 var(--font-display); letter-spacing: -.035em; }
+.vip-intro h1 em { color: #f3cfb7; }
+.vip-intro-copy > p { max-width: 31ch; color: #f1e2da; line-height: 1.55; text-wrap: pretty; }
 .ip-benefits { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 0; margin: 12px 0 0; list-style: none; }
 .ip-benefits li { display: flex; align-items: center; gap: 7px; font-size: 14px; }
 .ip-benefits .icon { width: 16px; height: 16px; flex-basis: 16px; }
 .ip-plans { padding: 0; border: 0; min-inline-size: 0; margin: 32px 0 0; }
 .ip-plans legend { padding: 0; font: 32px/1.2 var(--font-display); }
-.vip-offer, .vip-period, .vip-renewal, .vip-review p, .vip-details p { color: var(--text-secondary); }
-.vip-offer { margin: 6px 0 16px; }
-.vip-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-.ip-plan { display: flex; flex-direction: column; padding: clamp(16px, 2vw, 26px); border-radius: 14px; background: var(--bg-surface); border: 1px solid var(--border-default); cursor: pointer; }
-.ip-plan:hover { background: var(--bg-raised); }
-.ip-plan:has(input:checked) { border-color: var(--brand-primary); background: linear-gradient(135deg, #422438, #2a1e30); }
-.ip-plan:has(input:focus-visible) { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
-.vip-plan-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.ip-plan input, .ip-consent input { accent-color: var(--brand-primary); }
-.ip-plan input { width: 18px; height: 18px; margin: 0; }
-.vip-amount { margin-top: 18px; font: 500 clamp(32px, 3.5vw, 44px)/1.1 var(--font-display); }
-.vip-period, .vip-renewal { font-size: 14px; }
-.vip-period { padding: 3px 0 18px; }
-.vip-renewal { border-top: 1px solid var(--border-default); padding-top: 12px; margin-top: auto; }
-.vip-renewal b { color: var(--text-primary); font-weight: 600; }
+.plan-heading { margin: clamp(32px,5vw,56px) 0 24px; text-align: center; }
+.plan-heading p, .plan-terms, .vip-review p, .vip-details p { color: var(--text-secondary); }
+.plan-heading p { margin-top: 7px; }
+.vip-options, .reason-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; }
+.ip-plan { display: flex; flex-direction: column; padding: clamp(18px,2.4vw,30px); border-radius: 18px; background: var(--bg-surface); border: 1px solid var(--border-default); }
+.vip-featured { border-color: #ba708f; background: radial-gradient(ellipse at 50% 126%, #8a3958 0, #4c293d 44%, #2d202e 78%); }
+.vip-plan-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; justify-content: space-between; min-height: 28px; }
+.vip-plan-top h3 { font: 600 20px/1.3 var(--font-body); }
+.vip-pick { background: #f2d79c; color: #382917; padding: 4px 12px; border-radius: 999px; font: 700 12px/1.4 var(--font-body); }
+.vip-amount { margin-top: 32px; color: var(--text-primary); font: 550 clamp(34px,3.5vw,46px)/1.05 var(--font-display); }
+.vip-period, .vip-renewal { color: var(--text-secondary); font-size: 14px; }
+.vip-featured .vip-period, .vip-featured .vip-renewal { color: #f3dde7; }
+.vip-period { margin-block: 5px 14px; }
+.vip-renewal { margin-top: auto; }
+.plan-buy { width: 100%; margin-top: 20px; border-radius: 11px; justify-content: space-between; padding-inline: 17px; color: var(--text-primary); background: #393141; }
+.plan-buy:hover { background: #4a3d51; }
+.vip-featured .plan-buy { color: #2c1725; background: linear-gradient(100deg,#e995bd,#ffbbb4); }
+.vip-featured .plan-buy:hover { background: #ffc0d4; }
+.vip-featured .plan-buy img { filter: brightness(0); }
+.plan-terms { text-align: center; font-size: 13px; margin-top: 14px; }
+.ip-consent input, .payment-methods input { accent-color: var(--brand-primary); }
+.payment-methods { padding: 0; margin: 0 0 18px; border: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.payment-methods legend { font-weight: 600; margin-bottom: 8px; }
+.payment-methods label { border-radius: 9px; background: var(--bg-surface); border: 1px solid var(--border-default); display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; cursor: pointer; }
+.payment-methods label:has(:checked) { border-color: var(--brand-primary); }
+.vip-reasons { margin-top: clamp(36px,5vw,60px); }
+.vip-reasons h2 { margin-bottom: 18px; }
+.reason-grid article { padding: 20px; border-radius: 14px; background: linear-gradient(145deg,#302533,#231c29); }
+.reason-grid article > .icon { width: 21px; height: 21px; }
+.reason-grid h3 { font: 500 22px/1.18 var(--font-display); margin: 12px 0 7px; }
+.reason-grid p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
 .vip-review { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
 .vip-review .button { min-width: 180px; justify-content: center; }
 .vip-demo { text-align: right; color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
@@ -90,16 +110,48 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
 .vip-details summary { cursor: pointer; padding-block: 14px; width: fit-content; }
 .vip-details p { max-width: 76ch; margin-bottom: 12px; }
 @media (max-width: 700px) {
-  .vip-intro { min-height: 0; background-size: auto, cover; background-position: center, center 34%; background-image: linear-gradient(90deg,#201627fa 0%,#201627dc 52%,#20162785), url("assets/hero-stills-4x3-v1/01-chris-home.webp"); }
-  .vip-intro-copy { width: 100%; padding: 22px; }
-  .vip-intro-copy > p { color: var(--text-primary); }
-  .vip-options { grid-template-columns: 1fr; gap: 10px; }
-  .vip-options .ip-plan { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 0 12px; padding: 14px 16px; }
-  .vip-plan-top { grid-column: 1 / -1; }
-  .vip-amount { margin-top: 5px; grid-column: 1 / -1; }
-  .vip-period, .vip-renewal { grid-column: 1 / -1; padding: 0; border: 0; }
+  .vip-intro {
+    align-items: end; min-height: 0; padding-top: clamp(132px, 38vw, 260px);
+    background-image: linear-gradient(0deg, #24191f 0%, #24191ff5 24%, #24191fb5 40%, transparent 67%), url("assets/membership/vip-cast.webp");
+    background-size: cover, 131% auto; background-position: center, right top; background-repeat: no-repeat;
+  }
+  .vip-intro-copy { width: 100%; padding: 12px 22px 24px; }
+  .vip-intro h1 { margin: 9px 0; font-size: clamp(34px, 8.8vw, 50px); }
+  .vip-intro h1 br { display: none; }
+  .vip-intro h1 em::before { content: " "; }
+  .vip-intro-copy > p { max-width: 36ch; font-size: 14px; }
+  .vip-options, .reason-grid { grid-template-columns: 1fr; gap: 10px; }
+  .plan-heading { margin-bottom: 16px; }
+  .vip-amount { margin-top: 16px; }
+  .vip-period { margin-bottom: 6px; }
+  .plan-buy { margin-top: 14px; }
   .vip-review { display: grid; text-align: center; }
   .vip-demo { text-align: center; }
+}
+#topup-form { border-top: 1px solid var(--border-default); margin-top: 18px; }
+#topup-title { scroll-margin-top: 18px; }
+.topup-copy, .topup-summary p { color: var(--text-secondary); }
+.topup-copy { margin: 6px 0 18px; }
+.topup-options { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.topup-card { position: relative; display: grid; justify-items: center; text-align: center; gap: 6px; padding: 20px 12px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--bg-surface); cursor: pointer; }
+.topup-card:hover { background: var(--bg-raised); }
+.topup-card:has(:checked) { border-color: #e38ab2; background: radial-gradient(ellipse at 50% 0%, #513046, #2a202f 78%); }
+.topup-card:has(:focus-visible) { outline: 2px solid var(--brand-primary); outline-offset: 3px; }
+.topup-card input { position: absolute; top: 14px; right: 14px; width: 17px; height: 17px; margin: 0; accent-color: var(--brand-primary); }
+.topup-card img { object-fit: contain; margin-bottom: 4px; }
+.topup-name { color: var(--text-secondary); font-size: 14px; }
+.topup-quantity, .topup-bonus { white-space: nowrap; font: 500 clamp(30px,3vw,42px)/1.08 var(--font-display); }
+.topup-bonus { font-size: clamp(24px,2.5vw,34px); color: #f2ce99; }
+.topup-quantity small, .topup-bonus small { font: 500 13px/1.2 var(--font-body); }
+.topup-price { margin-top: 8px; color: var(--text-secondary); font-size: 13px; }
+.topup-summary img { width: 100px; height: 100px; object-fit: contain; }
+@media (max-width: 700px) {
+  .topup-options { grid-template-columns: 1fr; gap: 8px; }
+  .topup-card { grid-template-columns: 54px minmax(0,1fr); justify-items: start; text-align: left; align-items: center; gap: 4px 14px; padding: 14px 32px 14px 12px; }
+  .topup-card img { grid-row: 1 / 5; width: 54px; height: 54px; margin: 0; }
+  .topup-card input { right: 12px; }
+  .topup-price { margin-top: 2px; }
+
 }
 .ip-order { margin: 0; }.ip-order > div { display: flex; justify-content: space-between; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--border-default); }.ip-order dt { color: var(--text-secondary); font-size: 13px; }.ip-order dd { margin: 0; text-align: right; font-size: 13px; }
 .ip-consent { display: flex; align-items: flex-start; gap: 10px; margin-top: 24px; font-size: 12px; color: var(--text-secondary); }.ip-consent input { flex: 0 0 auto; margin-top: 4px; }

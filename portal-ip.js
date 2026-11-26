@@ -6,7 +6,7 @@
   extra.hidden = true;
   main.append(extra);
   let cycle = "monthly";
-  let resumeCheckout = false;
+  let checkoutDestination = null;
   let checkoutState = "review";
   let upgradePhoto = null;
   let membership = null;
@@ -17,6 +17,14 @@
     quarterly: { label: "Quarterly", period: "3 months", first: "$24.95", regular: "$49.90", unit: "quarter" },
     yearly: { label: "Yearly", period: "12 months", first: "$89.95", regular: "$179.90", unit: "year" }
   };
+  const staminaPacks = {
+    dessert: { name: "A Sweet Dessert", price: "$14.90", base: 24000, bonus: 3000 },
+    lunch: { name: "A Hearty Lunch", price: "$19.90", base: 36000, bonus: 8000 },
+    movie: { name: "A Movie Ticket", price: "$29.90", base: 60000, bonus: 12000 }
+  };
+  let selectedPack = "lunch";
+  let completedPack = null;
+  const formatStamina = value => value.toLocaleString("en-US");
   const cycleKey = "rizzora.preview.billing-cycle";
   try {
     const savedCycle = sessionStorage.getItem(cycleKey);
@@ -129,48 +137,102 @@
     extra.innerHTML = `<div class="vip-page">
       <header class="vip-intro">
         <div class="vip-intro-copy">
-          <h1 tabindex="-1">Rizzora VIP</h1>
-          <p>Hear their voice, share a photo, or settle in for a longer conversation.</p>
-          ${benefits}
+          <div class="vip-signature"><img src="assets/membership/crown.svg" alt="">Rizzora VIP</div>
+          <h1 tabindex="-1">Stay a little<br><em>longer.</em></h1>
+          <p>Hear the smile in his voice. Share one more photo before you say goodnight.</p>
         </div>
       </header>
-      <form id="plan-form">
-        <fieldset class="ip-plans">
-          <legend>Choose your plan</legend>
-          <p class="vip-offer">Save 50% on your first paid billing period. All prices in USD.</p>
-          <div class="vip-options">${Object.entries(cycles).map(([id, plan]) => `
-            <label class="ip-plan">
-              <span class="vip-plan-top"><strong>${plan.label}</strong><input type="radio" name="cycle" value="${id}" ${id === cycle ? "checked" : ""}></span>
-              <span class="vip-amount">${plan.first}</span>
-              <span class="vip-period">First ${plan.unit}${plan.trialDays ? ` after a ${plan.trialDays}-day free trial` : ""}</span>
-              <span class="vip-renewal">Renews at <b>${plan.regular}</b> per ${plan.unit}.</span>
-            </label>`).join("")}
-          </div>
-        </fieldset>
-        <div class="vip-review"><p>Plans renew automatically. Cancel anytime.</p>
-          <button class="button button-primary" type="submit">Review plan${image("arrow")}</button></div>
-        <p class="vip-demo">Subscription preview · No payment will be taken.</p>
+      <form id="plan-form" aria-labelledby="plans-title">
+        <header class="plan-heading"><h2 id="plans-title">Choose your plan</h2>
+          <p>Save 50% on your first paid billing period. All prices in USD.</p></header>
+        <div class="vip-options">${Object.entries(cycles).map(([id, plan]) => `
+          <article class="ip-plan ${id === "quarterly" ? "vip-featured" : ""}">
+            <div class="vip-plan-top"><h3>${plan.label}</h3>${id === "quarterly" ? '<span class="vip-pick">Our pick</span>' : ""}</div>
+            <p class="vip-amount">${plan.first}</p>
+            <p class="vip-period">First ${plan.unit}${plan.trialDays ? ` after a ${plan.trialDays}-day free trial` : ""}</p>
+            <p class="vip-renewal">Then ${plan.regular} per ${plan.unit}.</p>
+            <button class="button plan-buy" type="submit" name="cycle" value="${id}">Choose ${plan.label.toLowerCase()}${image("arrow")}</button>
+          </article>`).join("")}
+        </div>
+        <p class="plan-terms">Plans renew automatically. Cancel anytime. Demo checkout only.</p>
       </form>
       <details class="vip-details"><summary>How Stamina and the free trial work</summary>
-        <p>Every plan includes 60,000 Stamina each month. Chats, photos and voice interactions use Stamina. Your monthly balance resets, and any extra Stamina you buy carries over and is used after your monthly allowance.</p>
+        <p>Every plan includes 60,000 Stamina each month. Chats, photos and voice interactions use Stamina. Your monthly allowance resets each month. One-time Stamina packs are valid for 31 days.</p>
         <p>On the monthly plan, the first ${cycles.monthly.trialDays} days are free. Trial Stamina expires at the end of the trial. With a live subscription, your card issuer may briefly show a temporary authorization hold.</p>
       </details>
+      <form id="topup-form">
+        <fieldset class="ip-plans"><legend tabindex="-1" id="topup-title">Stamina Supplement</legend>
+          <p class="topup-copy">Pick a little treat to keep the conversation going. Each one-time pack lasts 31 days.</p>
+          <div class="topup-options">${Object.entries(staminaPacks).map(([id, pack]) => `
+            <label class="topup-card">
+              <input type="radio" name="pack" value="${id}" ${selectedPack === id ? "checked" : ""}>
+              <img src="assets/membership/${id}.webp" alt="" width="76" height="76">
+              <strong class="topup-name">${pack.name}</strong>
+              <span class="topup-quantity">${formatStamina(pack.base)} <small>Stamina</small></span>
+              <span class="topup-bonus">+ ${formatStamina(pack.bonus)} <small>bonus</small></span>
+              <span class="topup-price">${pack.price} · one time</span>
+            </label>`).join("")}</div>
+        </fieldset>
+        <div class="vip-review"><p>One-time purchase · No subscription required</p>
+          <button class="button button-primary" type="submit">Review pack · <span data-pack-price>${staminaPacks[selectedPack].price}</span>${image("arrow")}</button></div>
+        <p class="vip-demo">Demo packs and prices · No payment will be taken.</p>
+      </form>
+      <section class="vip-reasons" aria-labelledby="reasons-title">
+        <h2 id="reasons-title">What comes with membership?</h2>
+        <div class="reason-grid">
+          <article>${image("heart")}<h3>More time together</h3><p>Every plan includes 60,000 Stamina each month. Use it for a quick morning hello or a long conversation after dark.</p></article>
+          <article>${image("shield")}<h3>Clear from the start</h3><p>See your first price and renewal rate before you choose. You can cancel your subscription at any time.</p></article>
+          <article>${image("mic")}<h3>Hear it in his voice</h3><p>Play a voice note or open a members-only photo. There’s more than one way to get to know him.</p></article>
+        </div>
+      </section>
     </div>`;
   }
+  function beginCheckout(destination) {
+    if (signedIn) {
+      navigateTo(destination);
+      return;
+    }
+    checkoutDestination = destination;
+    showLogin();
+  }
+
+  const paymentMethods = `<fieldset class="payment-methods"><legend>Choose a payment method</legend>
+    <label><input type="radio" name="method" value="card" checked required>Demo card</label>
+    <label><input type="radio" name="method" value="wallet" required>Demo wallet</label>
+  </fieldset>`;
+  let packMethod = "";
   function checkout() {
     if (!signedIn) {
       extra.innerHTML = `${heading("RIZZORA VIP", "A little closer.", "Sign in to continue with your selected plan.")}<button class="button button-primary" type="button" data-checkout-login>Log in & continue${image("arrow")}</button><a class="ip-back" href="#membership">Change plan</a>`;
       return;
     }
     if (checkoutState !== "review") {
-      const labels = { success: ["VIP is active.", "Your demo membership is ready. No payment was made."], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
+      const labels = { success: ["VIP is active.", `Confirmed with your demo ${membership?.method || "card"}. No payment was made.`], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
       const [title, detail] = labels[checkoutState];
       const photoLink = upgradePhoto ? `<a class="text-link" href="#chat/${upgradePhoto.id}">${checkoutState === "success" ? "View unlocked photo" : "Back to photo"}</a>` : "";
       extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}${photoLink}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
       return;
     }
     const plan = cycles[cycle];
-    extra.innerHTML = `${heading("CHECKOUT · PREVIEW", "Your VIP membership.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP · ${cycles[cycle].label}</h2>${benefits}</section><form id="payment-form"><dl class="ip-order"><div><dt>Billing period</dt><dd>${cycles[cycle].period}</dd></div><div><dt>Starting price (USD)</dt><dd>${plan.trialDays ? `$0 for ${plan.trialDays} days` : `${plan.first} for the first ${plan.unit}`}</dd></div>${plan.trialDays ? `<div><dt>After the trial</dt><dd>${plan.first} for the first ${plan.unit}</dd></div>` : ""}<div><dt>Renews at</dt><dd>${plan.regular} per ${plan.unit}</dd></div><div><dt>Included allowance</dt><dd>60,000 Stamina / month</dd></div></dl><p class="ip-disclosure">Simulation only. No card or billing information is collected.</p><label class="ip-consent"><input type="checkbox" id="payment-consent" required>I understand this is a payment preview with no charge.</label><div class="ip-actions"><button class="button button-primary" type="submit">Simulate payment${image("arrow")}</button><button class="text-link" type="button" data-payment-fail>Simulate failure</button><button class="text-link" type="button" data-payment-cancel>Cancel</button></div></form></div>`;
+    extra.innerHTML = `${heading("CHECKOUT · PREVIEW", "Your VIP membership.")}<div class="ip-membership-layout"><section><h2>Rizzora VIP · ${cycles[cycle].label}</h2>${benefits}</section><form id="payment-form">${paymentMethods}<dl class="ip-order"><div><dt>Billing period</dt><dd>${cycles[cycle].period}</dd></div><div><dt>Starting price (USD)</dt><dd>${plan.trialDays ? `$0 for ${plan.trialDays} days` : `${plan.first} for the first ${plan.unit}`}</dd></div>${plan.trialDays ? `<div><dt>After the trial</dt><dd>${plan.first} for the first ${plan.unit}</dd></div>` : ""}<div><dt>Renews at</dt><dd>${plan.regular} per ${plan.unit}</dd></div><div><dt>Included allowance</dt><dd>60,000 Stamina / month</dd></div></dl><p class="ip-disclosure">Simulation only. No card or billing information is collected.</p><label class="ip-consent"><input type="checkbox" id="payment-consent" required>I understand this is a payment preview with no charge.</label><div class="ip-actions"><button class="button button-primary" type="submit">Simulate payment${image("arrow")}</button><button class="text-link" type="button" data-payment-fail>Simulate failure</button><button class="text-link" type="button" data-payment-cancel>Cancel</button></div></form></div>`;
+  }
+  function packCheckout(id) {
+    const pack = staminaPacks[id];
+    selectedPack = id;
+    const back = '<a class="text-link" href="#membership/stamina">Back to Stamina packs</a>';
+    if (!signedIn) {
+      extra.innerHTML = `${heading("STAMINA SUPPLEMENT", pack.name, "Log in to continue with your one-time pack.")}<div class="ip-actions"><button class="button button-primary" type="button" data-checkout-login>Log in &amp; continue${image("arrow")}</button>${back}</div>`;
+      return;
+    }
+    const total = formatStamina(pack.base + pack.bonus);
+    if (completedPack === id) {
+      extra.innerHTML = `${heading("STAMINA SUPPLEMENT", "Your Stamina is ready.", `${total} demo Stamina added with your demo ${packMethod}. No payment was made.`)}<p>Extra Stamina balance: ${formatStamina(sampleCredits)}</p><div class="ip-actions"><a class="button button-primary" href="#account">My account</a>${back}</div>`;
+      return;
+    }
+    extra.innerHTML = `${heading("ONE-TIME PURCHASE", "Your Stamina pack.")}<div class="ip-membership-layout"><section class="topup-summary"><img src="assets/membership/${id}.webp" alt=""><h2>${pack.name}</h2><p>Valid for 31 days · No automatic renewal</p></section>
+      <form id="pack-payment-form">${paymentMethods}<dl class="ip-order"><div><dt>Stamina</dt><dd>${formatStamina(pack.base)}</dd></div><div><dt>Bonus</dt><dd>+ ${formatStamina(pack.bonus)}</dd></div><div><dt>Total Stamina</dt><dd>${total}</dd></div><div><dt>One-time price (USD)</dt><dd>${pack.price}</dd></div></dl>
+      <label class="ip-consent"><input type="checkbox" required>I understand this is a demo purchase with no charge.</label>
+      <div class="ip-actions"><button class="button button-primary" type="submit">Simulate top-up</button>${back}</div></form></div>`;
   }
   function account() {
     const header = `<div class="center-title"><a class="icon-button center-back" aria-label="Back" id="account-back">${image("arrow")}</a><h1 tabindex="-1">User Center</h1></div>`;
@@ -201,7 +263,7 @@
   function route({ initialLoad = false } = {}) {
     // A history/navigation change cancels the old dialog's intended destination.
     if (dialog.open) {
-      pendingChat = false; resumeCheckout = false; returnFocus = null;
+      pendingChat = false; checkoutDestination = null; returnFocus = null;
       portalAuth.close(); closeDialog();
     }
     stopMedia();
@@ -215,15 +277,19 @@
     }
     const returnPhoto = upgradePhoto && hash === "chat/" + upgradePhoto.id ? upgradePhoto : null;
     if (hash !== "membership" && hash !== "checkout") upgradePhoto = null;
+    const onMembership = hash === "membership" || hash === "membership/stamina";
+    const packId = hash.startsWith("stamina-checkout/") ? hash.slice("stamina-checkout/".length) : "";
+    const onPackCheckout = Object.hasOwn(staminaPacks, packId);
     const isChat = hash === "chat" || hash.startsWith("chat/");
-    const isHome = !isChat && !["discover", "membership", "checkout", "account"].includes(hash);
+    const isHome = !isChat && !onMembership && !onPackCheckout && !["discover", "membership", "checkout", "account"].includes(hash);
     document.querySelector("#home-view").hidden = !isHome;
     document.querySelector("#discover-view").hidden = hash !== "discover";
     extra.hidden = isHome || hash === "discover";
     document.body.dataset.view = isHome ? "home" : hash === "discover" ? "discover" : isChat ? "chat" : "ip";
-    document.querySelectorAll("[data-nav]").forEach((a) => { if (a.dataset.nav === (isHome ? "home" : isChat ? "chat" : hash)) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    document.querySelectorAll("[data-nav]").forEach((a) => { if (a.dataset.nav === (isHome ? "home" : isChat ? "chat" : onMembership || onPackCheckout ? "membership" : hash)) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
     if (isChat) window.RizzoraChat.render(extra, hash.split("/")[1]);
-    else if (hash === "membership") { membershipPage(); document.title = "VIP Membership | Rizzora"; }
+    else if (onPackCheckout) { packCheckout(packId); document.title = "Stamina Pack | Rizzora"; }
+    else if (onMembership) { membershipPage(); document.title = "VIP Membership | Rizzora"; }
     else if (hash === "checkout") { checkout(); document.title = "Checkout Preview | Rizzora"; }
     else if (hash === "account") { account(); document.title = "User Center | Rizzora"; }
     else if (hash === "discover") { recommendations(); document.title = "Discover Characters | Rizzora"; }
@@ -231,12 +297,14 @@
     closeMenu();
     const draftInput = hash.startsWith("chat/") ? extra.querySelector("#chat-message") : null;
     let focusTarget = isHome ? document.querySelector(".hero h1") : hash === "discover" ? document.querySelector("#discover-title") : extra.querySelector("h1");
+    if (hash === "membership/stamina") focusTarget = extra.querySelector("#topup-title");
     if (draftInput?.value) focusTarget = draftInput;
     if (!dialog.open && focusTarget && !initialLoad) {
       if (focusTarget !== draftInput) focusTarget.setAttribute("tabindex", "-1");
       focusTarget.focus({ preventScroll: true });
     }
     if (isHome && hash && hash !== "home") document.getElementById(hash)?.scrollIntoView();
+    else if (hash === "membership/stamina") focusTarget.scrollIntoView({ block: "start" });
     else window.scrollTo({ top: 0, behavior: "instant" });
     if (returnPhoto) window.RizzoraChat.viewPhoto(returnPhoto.index);
     window.RizzoraHero?.sync();
@@ -254,14 +322,22 @@
       if (!["#account", "#checkout"].includes(location.hash)) accountOrigin = location.hash || "#home";
       navigateTo("account");
     },
-    afterLogin() { if (!resumeCheckout) return false; resumeCheckout = false; pendingChat = false; closeDialog(); navigateTo("checkout"); return true; },
+    afterLogin() {
+      if (!checkoutDestination) return false;
+      const next = checkoutDestination;
+      checkoutDestination = null;
+      pendingChat = false;
+      closeDialog();
+      navigateTo(next);
+      return true;
+    },
     isVIP() { return signedIn && Boolean(membership); },
   };
-  dialog.addEventListener("close", () => { if (!signedIn) resumeCheckout = false; });
+  dialog.addEventListener("close", () => { if (!signedIn) checkoutDestination = null; });
   document.addEventListener("click", (event) => {
     const button = event.target.closest("button, a");
     if (!button) return;
-    if (button.hasAttribute("data-checkout-login")) { resumeCheckout = true; showLogin(); }
+    if (button.hasAttribute("data-checkout-login")) beginCheckout(location.hash.slice(1));
     if (button.hasAttribute("data-payment-retry")) { checkoutState = "review"; checkout(); }
     if (button.hasAttribute("data-payment-fail")) { checkoutState = "failed"; checkout(); }
     if (button.hasAttribute("data-payment-cancel")) { checkoutState = "cancelled"; checkout(); }
@@ -269,28 +345,58 @@
       showDialog('<h2 id="dialog-title">Install app</h2><p>App installation is unavailable in this preview. You can keep using Rizzora in your browser.</p>');
     }
     if (button.hasAttribute("data-center-supplement") && signedIn) {
-      showDialog(`<h2 id="dialog-title">Stamina Supplement</h2><p>Try a sample pack. No payment is taken.</p>
+      showDialog(`<h2 id="dialog-title">Stamina Supplement</h2><p>Choose a one-time pack to add demo Stamina.</p>
         <p role="status" data-credit-balance>Extra credits: ${sampleCredits}</p>
-        <button type="button" class="button button-primary" data-sample-pack>Add 60 sample credits</button>`);
-    }
-    if (button.hasAttribute("data-sample-pack") && signedIn) {
-      sampleCredits += 60;
-      dialogContent.querySelector("[data-credit-balance]").textContent = `Extra credits: ${sampleCredits}`;
+        <a class="button button-primary" href="#membership/stamina">Browse Stamina packs</a>`);
     }
     if (button.hasAttribute("data-signout")) {
-      membership = null; sampleCredits = 0; resumeCheckout = false;
+      membership = null; sampleCredits = 0; completedPack = null; checkoutDestination = null;
       window.RizzoraChat?.clear();
       if (location.hash === "#account") { account(); extra.querySelector("h1").focus(); }
     }
   });
   document.addEventListener("change", event => {
-    if (!event.target.matches('#plan-form input[name="cycle"]')) return;
-    cycle = event.target.value;
-    try { sessionStorage.setItem(cycleKey, cycle); } catch { /* Use the in-memory selection. */ }
+    if (event.target.matches('#topup-form input[name="pack"]')) {
+      selectedPack = event.target.value;
+      extra.querySelector("[data-pack-price]").textContent = staminaPacks[selectedPack].price;
+    }
   });
   document.addEventListener("submit", (event) => {
-    if (event.target.id === "plan-form") { event.preventDefault(); cycle = new FormData(event.target).get("cycle"); if (!cycles[cycle]) cycle = "monthly"; checkoutState = "review"; navigateTo("checkout"); }
-    if (event.target.id === "payment-form") { event.preventDefault(); if (!signedIn || !event.target.checkValidity()) return; membership = { cycle, renewal: true }; checkoutState = "success"; checkout(); }
+    if (event.target.id === "topup-form") {
+      event.preventDefault();
+      selectedPack = new FormData(event.target).get("pack");
+      if (!Object.hasOwn(staminaPacks, selectedPack)) return;
+      completedPack = null;
+      beginCheckout("stamina-checkout/" + selectedPack);
+    }
+    if (event.target.id === "pack-payment-form") {
+      event.preventDefault();
+      if (!signedIn || completedPack === selectedPack || !event.target.checkValidity()) return;
+      packMethod = new FormData(event.target).get("method");
+      const pack = staminaPacks[selectedPack];
+      sampleCredits += pack.base + pack.bonus;
+      completedPack = selectedPack;
+      if (window.RizzoraChat.keepsInTab()) window.RizzoraChat.keepInTab(true);
+      packCheckout(selectedPack);
+      extra.querySelector("h1").focus();
+    }
+    if (event.target.id === "plan-form") {
+      event.preventDefault();
+      const choice = event.submitter?.value;
+      if (!Object.hasOwn(cycles, choice)) return;
+      cycle = choice;
+      try { sessionStorage.setItem(cycleKey, cycle); } catch { /* Keep the selection in memory. */ }
+      checkoutState = "review";
+      beginCheckout("checkout");
+    }
+    if (event.target.id === "payment-form") {
+      event.preventDefault();
+      if (!signedIn || checkoutState !== "review" || !event.target.checkValidity()) return;
+      membership = { cycle, renewal: true, method: new FormData(event.target).get("method") };
+      checkoutState = "success";
+      checkout();
+      extra.querySelector("h1").focus();
+    }
   });
   window.RizzoraChat.restoreTab();
   recommendations();
