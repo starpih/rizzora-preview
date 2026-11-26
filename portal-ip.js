@@ -18,9 +18,11 @@
     yearly: { label: "Yearly", period: "12 months", first: "$89.95", regular: "$179.90", unit: "year" }
   };
   const staminaPacks = {
+    coffee: { name: "A Cup of Coffee", price: "$0.99", base: 150, bonus: 0 },
     dessert: { name: "A Sweet Dessert", price: "$14.90", base: 24000, bonus: 3000 },
     lunch: { name: "A Hearty Lunch", price: "$19.90", base: 36000, bonus: 8000 },
-    movie: { name: "A Movie Ticket", price: "$29.90", base: 60000, bonus: 12000 }
+    movie: { name: "A Movie Ticket", price: "$29.90", base: 60000, bonus: 12000 },
+    dinner: { name: "A Romantic Dinner", price: "$9.99", base: 1500, bonus: 700 }
   };
   let selectedPack = "lunch";
   let completedPack = null;
@@ -169,7 +171,7 @@
               <img src="assets/membership/${id}.webp" alt="" width="76" height="76">
               <strong class="topup-name">${pack.name}</strong>
               <span class="topup-quantity">${formatStamina(pack.base)} <small>Stamina</small></span>
-              <span class="topup-bonus">+ ${formatStamina(pack.bonus)} <small>bonus</small></span>
+              ${pack.bonus ? `<span class="topup-bonus">+ ${formatStamina(pack.bonus)} <small>bonus</small></span>` : ""}
               <span class="topup-price">${pack.price} · one time</span>
             </label>`).join("")}</div>
         </fieldset>
