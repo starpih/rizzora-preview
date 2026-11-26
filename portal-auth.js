@@ -89,14 +89,14 @@ window.createRizzoraPortalAuth = ({ content, show, onAuthenticated, service = wi
         <button class="auth-provider" type="button" data-auth="google">${icon("google")}<span>Continue with Google</span>${icon("external")}</button>
         <button class="auth-provider" type="button" data-auth="facebook">${icon("facebook")}<span>Continue with Facebook</span>${icon("external")}</button>
         </div><div class="auth-divider"><span>or</span></div>
-        <button class="auth-provider" type="button" data-auth="email">${icon("mail")}<span>Continue with email</span>${icon("arrow")}</button>${isDemo ? '<button class="button button-primary auth-demo-start" type="button" data-auth-demo>Try the demo · no sign-up</button>' : ""}`;
+        <button class="auth-provider" type="button" data-auth="email">${icon("mail")}<span>Continue with email</span>${icon("arrow")}</button>${isDemo ? '<button class="button button-primary auth-demo-start" type="button" data-auth-demo>Continue as Explorer</button>' : ""}`;
     } else if (step === "email") {
       body = `<form class="auth-form" id="auth-email-form" novalidate><label for="auth-email">Email address</label><div class="auth-input">${icon("mail")}<input id="auth-email" type="email" name="email" autocomplete="email" maxlength="254" placeholder="you@example.com" required aria-describedby="auth-error"></div><button class="auth-submit" type="submit"><span>Send code</span>${icon("arrow")}</button></form>`;
     } else {
       body = `<p class="auth-subtitle">${isDemo ? "Code for" : "Enter the code sent to"} <strong>${escape(email)}</strong></p>
         <form class="auth-form" id="auth-code-form" novalidate><label for="auth-code">Verification code</label><input class="auth-code" id="auth-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required aria-describedby="auth-error${isDemo ? " auth-demo-code" : ""}"><button class="auth-submit" type="submit"><span>Verify & continue</span>${icon("arrow")}</button></form>
         <div class="auth-code-actions"><button type="button" data-auth-resend>Resend code</button><button type="button" data-auth-change>Change email</button></div>
-        ${isDemo ? '<p class="auth-demo-code" id="auth-demo-code">Demo code: <strong>123456</strong> · No email is sent.</p>' : ""}`;
+        ${isDemo ? '<p class="auth-demo-code" id="auth-demo-code">Access code: <strong>123456</strong> · No email is sent.</p>' : ""}`;
     }
     show(`<div class="auth-content">${back}<img class="auth-brand" src="assets/logo.svg" alt="" width="32" height="32"><h2 id="dialog-title">${heading}</h2>${body}<p class="auth-error" id="auth-error" role="alert" ${error ? "" : "hidden"}>${escape(error)}</p>${demoNotice()}<div class="auth-legal"><button type="button" data-legal="terms">Terms of use</button><span>·</span><button type="button" data-legal="privacy">Privacy policy</button></div></div>`, { auth: true, focusSelector: focus ? (step === "email" ? "#auth-email" : step === "code" ? "#auth-code" : '[data-auth="google"]') : ".dialog-close" });
     if (step === "email") content.querySelector("#auth-email").value = email;

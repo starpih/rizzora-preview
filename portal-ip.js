@@ -156,7 +156,7 @@
             <button class="button plan-buy" type="submit" name="cycle" value="${id}">Choose ${plan.label.toLowerCase()}${image("arrow")}</button>
           </article>`).join("")}
         </div>
-        <p class="plan-terms">Plans renew automatically. Cancel anytime. Demo checkout only.</p>
+        <p class="plan-terms">Plans renew automatically. Cancel anytime. No payment is taken here.</p>
       </form>
       <details class="vip-details"><summary>How Stamina and the free trial work</summary>
         <p>Every plan includes 60,000 Stamina each month. Chats, photos and voice interactions use Stamina. Your monthly allowance resets each month. One-time Stamina packs are valid for 31 days.</p>
@@ -177,7 +177,7 @@
         </fieldset>
         <div class="vip-review"><p>One-time purchase · No subscription required</p>
           <button class="button button-primary" type="submit">Review pack · <span data-pack-price>${staminaPacks[selectedPack].price}</span>${image("arrow")}</button></div>
-        <p class="vip-demo">Demo packs and prices · No payment will be taken.</p>
+        <p class="vip-demo">Illustrative prices · No payment will be taken.</p>
       </form>
       <section class="vip-reasons" aria-labelledby="reasons-title">
         <h2 id="reasons-title">What comes with membership?</h2>
@@ -199,8 +199,8 @@
   }
 
   const paymentMethods = `<fieldset class="payment-methods"><legend>Choose a payment method</legend>
-    <label><input type="radio" name="method" value="card" checked required>Demo card</label>
-    <label><input type="radio" name="method" value="wallet" required>Demo wallet</label>
+    <label><input type="radio" name="method" value="card" checked required>Card</label>
+    <label><input type="radio" name="method" value="wallet" required>Digital wallet</label>
   </fieldset>`;
   let packMethod = "";
   function checkout() {
@@ -209,7 +209,7 @@
       return;
     }
     if (checkoutState !== "review") {
-      const labels = { success: ["VIP is active.", `Confirmed with your demo ${membership?.method || "card"}. No payment was made.`], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
+      const labels = { success: ["VIP is active.", `Confirmed with your ${membership?.method || "card"}. No payment was made.`], failed: ["Payment declined.", "Simulated payment failure. Your membership has not changed."], cancelled: ["Payment cancelled.", "No payment was made. Your membership has not changed."] };
       const [title, detail] = labels[checkoutState];
       const photoLink = upgradePhoto ? `<a class="text-link" href="#chat/${upgradePhoto.id}">${checkoutState === "success" ? "View unlocked photo" : "Back to photo"}</a>` : "";
       extra.innerHTML = `${heading("PAYMENT PREVIEW", title, detail)}<div class="ip-actions">${checkoutState === "success" ? '<a class="button button-primary" href="#account">My account</a>' : '<button class="button button-primary" type="button" data-payment-retry>Try again</button>'}${photoLink}<a class="text-link" href="#membership">Membership plans${image("arrow")}</a></div>`;
@@ -228,33 +228,33 @@
     }
     const total = formatStamina(pack.base + pack.bonus);
     if (completedPack === id) {
-      extra.innerHTML = `${heading("STAMINA SUPPLEMENT", "Your Stamina is ready.", `${total} demo Stamina added with your demo ${packMethod}. No payment was made.`)}<p>Extra Stamina balance: ${formatStamina(sampleCredits)}</p><div class="ip-actions"><a class="button button-primary" href="#account">My account</a>${back}</div>`;
+      extra.innerHTML = `${heading("STAMINA SUPPLEMENT", "Your Stamina is ready.", `${total} Stamina added with your ${packMethod}. No payment was made.`)}<p>Extra Stamina balance: ${formatStamina(sampleCredits)}</p><div class="ip-actions"><a class="button button-primary" href="#account">My account</a>${back}</div>`;
       return;
     }
     extra.innerHTML = `${heading("ONE-TIME PURCHASE", "Your Stamina pack.")}<div class="ip-membership-layout"><section class="topup-summary"><img src="assets/membership/${id}.webp" alt=""><h2>${pack.name}</h2><p>Valid for 31 days · No automatic renewal</p></section>
       <form id="pack-payment-form">${paymentMethods}<dl class="ip-order"><div><dt>Stamina</dt><dd>${formatStamina(pack.base)}</dd></div><div><dt>Bonus</dt><dd>+ ${formatStamina(pack.bonus)}</dd></div><div><dt>Total Stamina</dt><dd>${total}</dd></div><div><dt>One-time price (USD)</dt><dd>${pack.price}</dd></div></dl>
-      <label class="ip-consent"><input type="checkbox" required>I understand this is a demo purchase with no charge.</label>
+      <label class="ip-consent"><input type="checkbox" required>I understand no payment will be taken.</label>
       <div class="ip-actions"><button class="button button-primary" type="submit">Simulate top-up</button>${back}</div></form></div>`;
   }
   function account() {
     const header = `<div class="center-title"><a class="icon-button center-back" aria-label="Back" id="account-back">${image("arrow")}</a><h1 tabindex="-1">User Center</h1></div>`;
     extra.innerHTML = `<div class="personal-center">${header}${signedIn ? `
-      <section class="center-section"><h2>Account</h2>
-        <div class="center-identity"><span class="center-avatar" aria-hidden="true">E</span>
-          <div><strong>Explorer</strong><p>explorer@example.invalid</p></div></div>
-      </section>
+      ${window.RizzoraCenter.profileMarkup()}
+      <section class="uc-level"></section>
       <section class="center-section"><h2>Membership</h2>
         <div class="center-membership"><strong>${membership ? `Rizzora VIP · ${cycles[membership.cycle].label}` : "Free Plan"}</strong>
           <a class="button button-primary" href="#membership">${membership ? "View plan" : "Become Premium"}${image("arrow")}</a></div>
       </section>
+      <section class="uc-map" hidden></section>
       <div class="center-menu">
         <button type="button" data-center-supplement>Stamina Supplement${image("chevron")}</button>
         <button type="button" data-center-install>Install app${image("chevron")}</button>
         <button type="button" data-signout>Log out${image("chevron")}</button>
       </div>
-      ${window.RizzoraAuthService ? "" : `<label class="keep-chats"><input id="keep-demo-chats" type="checkbox" ${window.RizzoraChat.keepsInTab() ? "checked" : ""}> Keep demo conversations in this tab after a refresh</label>`}
-      <p class="center-note">Demo account · Sample profile and credits.</p>` : `
+      ${window.RizzoraAuthService ? "" : `<label class="keep-chats"><input id="keep-demo-chats" type="checkbox" ${window.RizzoraChat.keepsInTab() ? "checked" : ""}> Keep my profile and conversations in this tab after a refresh</label>`}
+      ` : `
       <p>Log in to view your account and membership.</p><button type="button" class="button button-primary" data-open="login">Log in</button>`}</div>`;
+    if (signedIn) window.RizzoraCenter.mount(extra, account);
     extra.querySelector("#keep-demo-chats")?.addEventListener("change", event => {
       event.target.checked = window.RizzoraChat.keepInTab(event.target.checked);
     });
@@ -315,6 +315,7 @@
     route, renderRecentChats,
     demoBenefits() { return { membership, sampleCredits }; },
     restoreDemoBenefits(account) {
+      window.RizzoraCenter.restore(account?.profile);
       const plan = account?.membership;
       if (plan && Object.hasOwn(cycles, plan.cycle)) membership = { cycle: plan.cycle, renewal: Boolean(plan.renewal) };
       if (Number.isSafeInteger(account?.sampleCredits) && account.sampleCredits >= 0) sampleCredits = account.sampleCredits;
@@ -347,12 +348,13 @@
       showDialog('<h2 id="dialog-title">Install app</h2><p>App installation is unavailable in this preview. You can keep using Rizzora in your browser.</p>');
     }
     if (button.hasAttribute("data-center-supplement") && signedIn) {
-      showDialog(`<h2 id="dialog-title">Stamina Supplement</h2><p>Choose a one-time pack to add demo Stamina.</p>
+      showDialog(`<h2 id="dialog-title">Stamina Supplement</h2><p>Choose a one-time pack to add Stamina.</p>
         <p role="status" data-credit-balance>Extra credits: ${sampleCredits}</p>
         <a class="button button-primary" href="#membership/stamina">Browse Stamina packs</a>`);
     }
     if (button.hasAttribute("data-signout")) {
       membership = null; sampleCredits = 0; completedPack = null; checkoutDestination = null;
+      window.RizzoraCenter.reset();
       window.RizzoraChat?.clear();
       if (location.hash === "#account") { account(); extra.querySelector("h1").focus(); }
     }

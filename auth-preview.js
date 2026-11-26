@@ -14,7 +14,7 @@
   function reply(result) {
     window.opener.postMessage({ type: "rizzora:auth-preview", provider, attempt, result }, parentOrigin === "null" ? "*" : parentOrigin);
     document.querySelector("#approve-preview").disabled = true;
-    document.querySelector("#preview-status").textContent = result === "approved" ? "Demo authorization complete. You can return to Rizzora." : "Authorization cancelled.";
+    document.querySelector("#preview-status").textContent = result === "approved" ? "Authorization complete. You can return to Rizzora." : "Authorization cancelled.";
     // The opener closes the popup after validating the reply.
   }
   document.querySelector("#approve-preview").addEventListener("click", () => reply("approved"));

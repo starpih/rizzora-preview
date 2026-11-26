@@ -88,8 +88,8 @@ body[data-view="home"] .site-header { background: rgb(255 255 255 / 5%); -webkit
 .vip-renewal { margin-top: auto; }
 .plan-buy { width: 100%; margin-top: 20px; border-radius: 11px; justify-content: space-between; padding-inline: 17px; color: var(--text-primary); background: #393141; }
 .plan-buy:hover { background: #4a3d51; }
-.vip-featured .plan-buy { color: #2c1725; background: linear-gradient(100deg,#e995bd,#ffbbb4); }
-.vip-featured .plan-buy:hover { background: #ffc0d4; }
+.vip-featured .plan-buy { color: #2c1725; background: linear-gradient(100deg,#e995bd,#ffbbb4); transition: filter 160ms ease; }
+.vip-featured .plan-buy:hover { transform: none; filter: brightness(1.06); }
 .vip-featured .plan-buy img { filter: brightness(0); }
 .plan-terms { text-align: center; font-size: 13px; margin-top: 14px; }
 .ip-consent input, .payment-methods input { accent-color: var(--brand-primary); }

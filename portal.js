@@ -322,6 +322,7 @@ function showLogin() {
   portalAuth.open({ character: pendingChat ? selectedCharacter.shortName : "" });
 }
 function showSignedInAccount(user = {}) {
+  window.RizzoraCenter?.identify(user);
   signedIn = true;
   returnFocus = null;
   updateUnreadCount(0);
@@ -346,7 +347,7 @@ function finishDemoLogin(user = {}) {
 }
 function showAccount() {
   if (window.RizzoraIP) { window.RizzoraIP.openAccount(); return; }
-  showDialog(`<p class="eyebrow">DEMO ACCOUNT</p><h2 id="dialog-title">Hello, explorer.</h2><p>Your account gives you a place to return to your conversations.</p><p class="demo-label">This preview uses a temporary demo session. No personal information or purchase history is stored.</p><div class="dialog-stack"><button type="button" data-open="subscription">Explore VIP benefits</button><button type="button" data-open="chat">Open a demo conversation</button><button type="button" data-signout>Sign out of demo</button></div>`);
+  showDialog(`<p class="eyebrow">YOUR ACCOUNT</p><h2 id="dialog-title">Hello, explorer.</h2><p>Your account gives you a place to return to your conversations.</p><p class="demo-label">This preview uses a temporary session. No personal information or purchase history is stored.</p><div class="dialog-stack"><button type="button" data-open="subscription">Explore VIP benefits</button><button type="button" data-open="chat">Open a conversation</button><button type="button" data-signout>Log out</button></div>`);
 }
 function showChat() {
   if (!selectedCharacter) return;
